@@ -75,20 +75,13 @@ pub(crate) fn drag_face(
         let Some(Dragging { pointer_id, face, initial_extent, drag_ray }) = &frame.dragging_face
             else { continue };
 
-        // Construct the current ray of the dragging pointer.
-        //
-        // TODO bevy_mod_picking: it should be much easier to construct a
-        // pointer ray than this.
-        let Some(pointer_entity) = pointer_map.get_entity(*pointer_id)
-            else { continue };
-        let Ok(PointerLocation { location: Some(Location { position, .. }) }) =
-            pointer_locations.get(pointer_entity)
-            else { continue };
-        let Some((view_min, _)) = camera.logical_viewport_rect()
-            else { continue };
-        let view_position = *position - view_min;
-        let Some(pointer_ray) = camera.viewport_to_world(camera_transform, view_position)
-            else { continue };
+        let Some(pointer_ray) = get_pointer_ray(
+            *pointer_id,
+            &pointer_map,
+            &pointer_locations,
+            camera,
+            camera_transform,
+        ) else { continue };
 
         // Determine the new frame extents based on the desired position of the
         // dragging face.
@@ -104,6 +97,25 @@ pub(crate) fn drag_face(
             &mut polylines,
         )
     }
+}
+
+// TODO bevy_mod_picking: it should be much easier to construct a pointer ray
+// than this.
+fn get_pointer_ray(
+    pointer_id: PointerId,
+    pointer_map: &Res<PointerMap>,
+    pointer_locations: &Query<&PointerLocation>,
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+) -> Option<Ray> {
+    let pointer_entity = pointer_map.get_entity(pointer_id)?;
+    let Ok(PointerLocation {
+        location: Some(Location { position, .. }),
+    }) = pointer_locations.get(pointer_entity)
+        else { return None };
+    let (view_min, _) = camera.logical_viewport_rect()?;
+    let view_position = *position - view_min;
+    camera.viewport_to_world(camera_transform, view_position)
 }
 
 /// Find the closest pair of points `(p1, p2)` where `p1` is on ray `r1` and
