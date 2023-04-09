@@ -141,7 +141,7 @@ const FACE_NORMALS: [Vec3; 6] = [
 ];
 
 /// Encoded as `0bZYX`.
-pub(crate) type CornerIndex = usize;
+type CornerIndex = usize;
 
 /// Indexed by [`CornerIndex`].
 const CUBE_CORNERS: [[FaceIndex; 3]; 8] = [
