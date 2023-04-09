@@ -1,0 +1,28 @@
+[package]
+name = "bevy_fsc_box_frame"
+version = "0.1.0"
+edition = "2021"
+authors = ["Duncan Fairbanks <duncan.fairbanks@foresightmining.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+approx = "0.5"
+bevy_polyline = "0.6"
+bevy_rapier3d = "0.21"
+
+[dependencies.bevy]
+version = "0.10"
+default-features = false
+features = ["bevy_winit", "x11"]
+
+[dependencies.bevy_mod_picking]
+git = "https://github.com/aevyrie/bevy_mod_picking"
+rev = "f3525b4a7b191bd6f008e32d4cd219020c984c3a" # From "beta" branch
+default-features = false
+features = ["backend_rapier"]
+
+[[example]]
+name = "demo"
+path = "examples/demo.rs"
+required-features = ["bevy_mod_picking/debug"]
