@@ -13,6 +13,8 @@ use bevy_rapier3d::prelude::{Collider, Real};
 pub(crate) struct Dragging {
     // The pointer doing the drag.
     pointer_id: PointerId,
+    // The camera used to create the ray that started dragging.
+    camera_id: Entity,
     // The face being dragged.
     face: FaceIndex,
     // The face's extent at time of DragStart.
@@ -38,12 +40,6 @@ pub(crate) fn drag_face(
     mut line_handles: Query<&mut Handle<Polyline>>,
     mut polylines: ResMut<Assets<Polyline>>,
 ) {
-    // TODO bevy_mod_picking: For now we just assume this was the camera used to
-    // generate all picking rays, but it's possible that we have multiple
-    // cameras. We need more information from the events to know which camera
-    // the backend used to generate the ray.
-    let Ok((camera, camera_transform)) = picking_cameras.get_single() else { return };
-
     // Start or stop the dragging state machine based on events.
     for drag_start in drag_start_events.iter() {
         let Ok((mut frame, _, transform)) = box_frames.get_mut(drag_start.target())
@@ -54,6 +50,7 @@ pub(crate) fn drag_face(
         let face = face_index_from_world_normal(world_normal, transform);
         frame.dragging_face = Some(Dragging {
             pointer_id: drag_start.pointer_id(),
+            camera_id: pick_data.camera,
             face,
             initial_extent: frame.extents[face],
             drag_ray: Ray {
@@ -72,7 +69,12 @@ pub(crate) fn drag_face(
     // the new desired position of the face being dragged and update the box
     // frame to reflect that.
     for (mut frame, mut collider, _) in box_frames.iter_mut() {
-        let Some(Dragging { pointer_id, face, initial_extent, drag_ray }) = &frame.dragging_face
+        let Some(Dragging {
+            pointer_id, camera_id, face, initial_extent, drag_ray
+        }) = &frame.dragging_face
+            else { continue };
+
+        let Ok((camera, camera_transform)) = picking_cameras.get(*camera_id)
             else { continue };
 
         let Some(pointer_ray) = get_pointer_ray(
