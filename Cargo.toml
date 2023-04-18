@@ -18,7 +18,7 @@ features = ["bevy_winit", "x11"]
 
 [dependencies.bevy_mod_picking]
 git = "https://github.com/aevyrie/bevy_mod_picking"
-rev = "3c0cf4a172392734af4b2ccf5257da3cb7179a0f" # From "beta" branch
+rev = "c022159a4c1f04d8ed6697fd08413562fcecf2aa" # From "beta" branch
 default-features = false
 features = ["backend_rapier"]
 

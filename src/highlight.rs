@@ -23,11 +23,11 @@ pub(crate) fn highlight_face(
 
     let normalized_over = over_events
         .iter()
-        .map(|e| (e.target(), Some(e.event_data().pick_data)));
+        .map(|e| (e.target, Some(e.event.pick_data)));
     let normalized_move = move_events
         .iter()
-        .map(|e| (e.target(), Some(e.event_data().pick_data)));
-    let normalized_out = out_events.iter().map(|e| (e.target(), None));
+        .map(|e| (e.target, Some(e.event.pick_data)));
+    let normalized_out = out_events.iter().map(|e| (e.target, None));
 
     // Highlight faces intersecting a pointer ray. "Out" events will clear all
     // highlights.

@@ -3,8 +3,7 @@ use approx::relative_eq;
 use bevy::prelude::*;
 use bevy_mod_picking::{
     events::PointerEvent,
-    pointer::Location,
-    prelude::{DragEnd, DragStart, PointerId, PointerLocation, PointerMap, RapierPickSource},
+    prelude::{DragEnd, DragStart, PointerId, RapierPickCamera},
 };
 use bevy_polyline::prelude::Polyline;
 use bevy_rapier3d::prelude::{Collider, Real};
@@ -33,23 +32,21 @@ impl Dragging {
 pub(crate) fn drag_face(
     mut drag_start_events: EventReader<PointerEvent<DragStart>>,
     mut drag_end_events: EventReader<PointerEvent<DragEnd>>,
-    pointer_map: Res<PointerMap>,
-    picking_cameras: Query<(&Camera, &GlobalTransform), With<RapierPickSource>>,
-    pointer_locations: Query<&PointerLocation>,
+    picking_cameras: Query<&RapierPickCamera>,
     mut box_frames: Query<(&mut BoxFrame, &mut Collider, &GlobalTransform)>,
     mut line_handles: Query<&mut Handle<Polyline>>,
     mut polylines: ResMut<Assets<Polyline>>,
 ) {
     // Start or stop the dragging state machine based on events.
     for drag_start in drag_start_events.iter() {
-        let Ok((mut frame, _, transform)) = box_frames.get_mut(drag_start.target())
+        let Ok((mut frame, _, transform)) = box_frames.get_mut(drag_start.target)
             else { continue };
-        let pick_data = drag_start.event_data().pick_data;
+        let pick_data = drag_start.event.pick_data;
         let (Some(world_position), Some(world_normal)) = (pick_data.position, pick_data.normal)
             else { continue };
         let face = face_index_from_world_normal(world_normal, transform);
         frame.dragging_face = Some(Dragging {
-            pointer_id: drag_start.pointer_id(),
+            pointer_id: drag_start.pointer_id,
             camera_id: pick_data.camera,
             face,
             initial_extent: frame.extents[face],
@@ -60,7 +57,7 @@ pub(crate) fn drag_face(
         });
     }
     for drag_end in drag_end_events.iter() {
-        let Ok(mut frame) = box_frames.get_component_mut::<BoxFrame>(drag_end.target())
+        let Ok(mut frame) = box_frames.get_component_mut::<BoxFrame>(drag_end.target)
             else { continue };
         frame.dragging_face = None;
     }
@@ -74,20 +71,14 @@ pub(crate) fn drag_face(
         }) = &frame.dragging_face
             else { continue };
 
-        let Ok((camera, camera_transform)) = picking_cameras.get(*camera_id)
+        let Ok(pick_camera) = picking_cameras.get(*camera_id)
             else { continue };
-
-        let Some(pointer_ray) = get_pointer_ray(
-            *pointer_id,
-            &pointer_map,
-            &pointer_locations,
-            camera,
-            camera_transform,
-        ) else { continue };
+        let Some(pointer_ray) = pick_camera.ray_map().get(pointer_id)
+            else { continue };
 
         // Determine the new frame extents based on the desired position of the
         // dragging face.
-        let Some((drag_delta, _)) = closest_points_on_two_rays(drag_ray, &pointer_ray)
+        let Some((drag_delta, _)) = closest_points_on_two_rays(drag_ray, pointer_ray)
             else { continue };
         let mut new_extents = frame.extents;
         new_extents[*face] = (initial_extent + drag_delta).max(frame.min_extent);
@@ -99,25 +90,6 @@ pub(crate) fn drag_face(
             &mut polylines,
         )
     }
-}
-
-// TODO bevy_mod_picking: it should be much easier to construct a pointer ray
-// than this.
-fn get_pointer_ray(
-    pointer_id: PointerId,
-    pointer_map: &Res<PointerMap>,
-    pointer_locations: &Query<&PointerLocation>,
-    camera: &Camera,
-    camera_transform: &GlobalTransform,
-) -> Option<Ray> {
-    let pointer_entity = pointer_map.get_entity(pointer_id)?;
-    let Ok(PointerLocation {
-        location: Some(Location { position, .. }),
-    }) = pointer_locations.get(pointer_entity)
-        else { return None };
-    let (view_min, _) = camera.logical_viewport_rect()?;
-    let view_position = *position - view_min;
-    camera.viewport_to_world(camera_transform, view_position)
 }
 
 /// Find the closest pair of points `(p1, p2)` where `p1` is on ray `r1` and
