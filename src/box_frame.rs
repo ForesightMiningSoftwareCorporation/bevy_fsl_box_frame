@@ -74,7 +74,7 @@ impl BoxFrame {
                 },
                 box_frame_collider(extents),
                 PickableBundle::default(),
-                RapierPickTarget::default(),
+                RapierPickTarget,
             ));
     }
 
@@ -89,7 +89,9 @@ impl BoxFrame {
         *collider = box_frame_collider(new_extents);
         let new_lines = box_frame_polylines(new_extents);
         for (face_entity, new_line) in self.face_entities.into_iter().zip(new_lines) {
-            let Ok(mut line_handle) = line_handles.get_mut(face_entity) else { continue };
+            let Ok(mut line_handle) = line_handles.get_mut(face_entity) else {
+                continue;
+            };
             *line_handle = polylines.add(new_line);
         }
     }
