@@ -1,6 +1,5 @@
 use crate::drag_face::Dragging;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use bevy_mod_picking::{backends::rapier::RapierPickTarget, prelude::PickableBundle};
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
 use bevy_rapier3d::prelude::{Collider, Real};
 
@@ -73,8 +72,6 @@ impl BoxFrame {
                     ..default()
                 },
                 box_frame_collider(extents),
-                PickableBundle::default(),
-                RapierPickTarget,
             ));
     }
 

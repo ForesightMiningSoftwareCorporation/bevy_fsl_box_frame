@@ -1,15 +1,15 @@
 use crate::{face_index_from_world_normal, BoxFrame};
 use bevy::prelude::*;
 use bevy_mod_picking::{
-    events::PointerEvent,
+    events::Pointer,
     prelude::{Move, Out, Over},
 };
 use bevy_polyline::prelude::PolylineMaterial;
 
 pub(crate) fn highlight_face(
-    mut over_events: EventReader<PointerEvent<Over>>,
-    mut move_events: EventReader<PointerEvent<Move>>,
-    mut out_events: EventReader<PointerEvent<Out>>,
+    mut over_events: EventReader<Pointer<Over>>,
+    mut move_events: EventReader<Pointer<Move>>,
+    mut out_events: EventReader<Pointer<Out>>,
     box_frames: Query<(&BoxFrame, &GlobalTransform)>,
     mut line_handles: Query<&mut Handle<PolylineMaterial>>,
 ) {
@@ -23,17 +23,18 @@ pub(crate) fn highlight_face(
 
     let normalized_over = over_events
         .iter()
-        .map(|e| (e.target, Some(e.event.pick_data)));
+        .map(|e| (e.target, Some(e.event.hit.clone())));
     let normalized_move = move_events
         .iter()
-        .map(|e| (e.target, Some(e.event.pick_data)));
+        .map(|e| (e.target, Some(e.event.hit.clone())));
     let normalized_out = out_events.iter().map(|e| (e.target, None));
 
     // Highlight faces intersecting a pointer ray. "Out" events will clear all
     // highlights.
     for (target, maybe_pick_data) in normalized_over.chain(normalized_move).chain(normalized_out) {
-        let Ok((box_frame, transform)) = box_frames.get(target)
-            else { continue };
+        let Ok((box_frame, transform)) = box_frames.get(target) else {
+            continue;
+        };
 
         // Ignore events for entities that are already highlighted based on a
         // dragging face.

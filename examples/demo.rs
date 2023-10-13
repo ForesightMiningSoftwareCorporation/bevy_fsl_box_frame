@@ -6,12 +6,14 @@ use bevy_rapier3d::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(bevy_polyline::PolylinePlugin)
-        .add_plugins(DefaultPickingPlugins)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(BoxFramePlugin)
-        .add_startup_system(setup)
+        .add_plugins((
+            DefaultPlugins,
+            DefaultPickingPlugins,
+            bevy_polyline::PolylinePlugin,
+            RapierPhysicsPlugin::<NoUserData>::default(),
+            BoxFramePlugin,
+        ))
+        .add_systems(Startup, setup)
         .run();
 }
 

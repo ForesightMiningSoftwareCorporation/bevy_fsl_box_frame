@@ -2,27 +2,29 @@
 name = "bevy_fsc_box_frame"
 version = "0.1.0"
 edition = "2021"
-authors = ["Duncan Fairbanks <duncan.fairbanks@foresightmining.com>"]
+authors = ["Duncan Fairbanks <duncan.fairbanks@fslabs.ca>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 approx = "0.5"
-bevy_polyline = "0.6"
-bevy_rapier3d = "0.21"
+bevy_polyline = "0.7"
+bevy_rapier3d = "0.22"
 
 [dependencies.bevy]
-version = "0.10"
+version = "0.11"
 default-features = false
 features = ["bevy_winit", "x11"]
 
 [dependencies.bevy_mod_picking]
 git = "https://github.com/aevyrie/bevy_mod_picking"
-rev = "c022159a4c1f04d8ed6697fd08413562fcecf2aa" # From "beta" branch
+rev = "254c9e1bbadb22bfcda669e0a0fa815bedff25b4"
 default-features = false
 features = ["backend_rapier"]
 
 [[example]]
 name = "demo"
 path = "examples/demo.rs"
-required-features = ["bevy_mod_picking/debug"]
+# bevy_mod_picking uses whatever UI feature is enabled for debug drawing (bevy_ui or egui)
+# TODO: why does debug drawing rely on the bevy_ui picking backend?
+required-features = ["bevy_mod_picking/debug", "bevy/bevy_ui", "bevy_mod_picking/backend_bevy_ui"]

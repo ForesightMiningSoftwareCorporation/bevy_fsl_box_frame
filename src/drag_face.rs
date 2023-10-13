@@ -2,7 +2,7 @@ use crate::{face_index_from_world_normal, BoxFrame, FaceIndex};
 use approx::relative_eq;
 use bevy::prelude::*;
 use bevy_mod_picking::{
-    events::PointerEvent,
+    events::Pointer,
     prelude::{DragEnd, DragStart, PointerId, RapierPickCamera},
 };
 use bevy_polyline::prelude::Polyline;
@@ -30,8 +30,8 @@ impl Dragging {
 }
 
 pub(crate) fn drag_face(
-    mut drag_start_events: EventReader<PointerEvent<DragStart>>,
-    mut drag_end_events: EventReader<PointerEvent<DragEnd>>,
+    mut drag_start_events: EventReader<Pointer<DragStart>>,
+    mut drag_end_events: EventReader<Pointer<DragEnd>>,
     picking_cameras: Query<&RapierPickCamera>,
     mut box_frames: Query<(&mut BoxFrame, &mut Collider, &GlobalTransform)>,
     mut line_handles: Query<&mut Handle<Polyline>>,
@@ -39,15 +39,18 @@ pub(crate) fn drag_face(
 ) {
     // Start or stop the dragging state machine based on events.
     for drag_start in drag_start_events.iter() {
-        let Ok((mut frame, _, transform)) = box_frames.get_mut(drag_start.target)
-            else { continue };
-        let pick_data = drag_start.event.pick_data;
-        let (Some(world_position), Some(world_normal)) = (pick_data.position, pick_data.normal)
-            else { continue };
+        let Ok((mut frame, _, transform)) = box_frames.get_mut(drag_start.target) else {
+            continue;
+        };
+        let hit_data = &drag_start.event.hit;
+        let (Some(world_position), Some(world_normal)) = (hit_data.position, hit_data.normal)
+        else {
+            continue;
+        };
         let face = face_index_from_world_normal(world_normal, transform);
         frame.dragging_face = Some(Dragging {
             pointer_id: drag_start.pointer_id,
-            camera_id: pick_data.camera,
+            camera_id: hit_data.camera,
             face,
             initial_extent: frame.extents[face],
             drag_ray: Ray {
@@ -57,8 +60,9 @@ pub(crate) fn drag_face(
         });
     }
     for drag_end in drag_end_events.iter() {
-        let Ok(mut frame) = box_frames.get_component_mut::<BoxFrame>(drag_end.target)
-            else { continue };
+        let Ok(mut frame) = box_frames.get_component_mut::<BoxFrame>(drag_end.target) else {
+            continue;
+        };
         frame.dragging_face = None;
     }
 
@@ -67,19 +71,28 @@ pub(crate) fn drag_face(
     // frame to reflect that.
     for (mut frame, mut collider, _) in box_frames.iter_mut() {
         let Some(Dragging {
-            pointer_id, camera_id, face, initial_extent, drag_ray
+            pointer_id,
+            camera_id,
+            face,
+            initial_extent,
+            drag_ray,
         }) = &frame.dragging_face
-            else { continue };
+        else {
+            continue;
+        };
 
-        let Ok(pick_camera) = picking_cameras.get(*camera_id)
-            else { continue };
-        let Some(pointer_ray) = pick_camera.ray_map().get(pointer_id)
-            else { continue };
+        let Ok(pick_camera) = picking_cameras.get(*camera_id) else {
+            continue;
+        };
+        let Some(pointer_ray) = pick_camera.ray_map().get(pointer_id) else {
+            continue;
+        };
 
         // Determine the new frame extents based on the desired position of the
         // dragging face.
-        let Some((drag_delta, _)) = closest_points_on_two_rays(drag_ray, pointer_ray)
-            else { continue };
+        let Some((drag_delta, _)) = closest_points_on_two_rays(drag_ray, pointer_ray) else {
+            continue;
+        };
         let mut new_extents = frame.extents;
         new_extents[*face] = (initial_extent + drag_delta).max(frame.min_extent);
 

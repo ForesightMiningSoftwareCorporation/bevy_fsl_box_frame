@@ -14,7 +14,7 @@ mod box_frame;
 mod drag_face;
 mod highlight;
 
-use bevy::prelude::Plugin;
+use bevy::prelude::{Plugin, Update};
 pub use box_frame::*;
 use drag_face::*;
 use highlight::*;
@@ -24,6 +24,6 @@ pub struct BoxFramePlugin;
 
 impl Plugin for BoxFramePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems((highlight_face, drag_face));
+        app.add_systems(Update, (highlight_face, drag_face));
     }
 }
