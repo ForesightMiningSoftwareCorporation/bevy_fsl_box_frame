@@ -1,9 +1,9 @@
 use crate::{face_index_from_world_normal, BoxFrame, FaceIndex};
 use approx::relative_eq;
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_mod_picking::{
     events::Pointer,
-    prelude::{DragEnd, DragStart, PointerId, RapierPickCamera},
+    prelude::{DragEnd, DragStart, PointerId, PointerLocation, PointerMap, RapierPickable},
 };
 use bevy_polyline::prelude::Polyline;
 use bevy_rapier3d::prelude::{Collider, Real};
@@ -29,10 +29,14 @@ impl Dragging {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn drag_face(
     mut drag_start_events: EventReader<Pointer<DragStart>>,
     mut drag_end_events: EventReader<Pointer<DragEnd>>,
-    picking_cameras: Query<&RapierPickCamera>,
+    pointer_map: Res<PointerMap>,
+    primary_window: Query<Entity, With<PrimaryWindow>>,
+    pointers: Query<&PointerLocation>,
+    cameras: Query<(&Camera, &GlobalTransform), With<RapierPickable>>,
     mut box_frames: Query<(&mut BoxFrame, &mut Collider, &GlobalTransform)>,
     mut line_handles: Query<&mut Handle<Polyline>>,
     mut polylines: ResMut<Assets<Polyline>>,
@@ -81,16 +85,20 @@ pub(crate) fn drag_face(
             continue;
         };
 
-        let Ok(pick_camera) = picking_cameras.get(*camera_id) else {
-            continue;
-        };
-        let Some(pointer_ray) = pick_camera.ray_map().get(pointer_id) else {
+        let Some(pointer_ray) = get_pointer_ray(
+            &pointer_map,
+            &primary_window,
+            &cameras,
+            &pointers,
+            *camera_id,
+            *pointer_id,
+        ) else {
             continue;
         };
 
         // Determine the new frame extents based on the desired position of the
         // dragging face.
-        let Some((drag_delta, _)) = closest_points_on_two_rays(drag_ray, pointer_ray) else {
+        let Some((drag_delta, _)) = closest_points_on_two_rays(drag_ray, &pointer_ray) else {
             continue;
         };
         let mut new_extents = frame.extents;
@@ -103,6 +111,30 @@ pub(crate) fn drag_face(
             &mut polylines,
         )
     }
+}
+
+fn get_pointer_ray(
+    pointer_map: &PointerMap,
+    primary_window: &Query<Entity, With<PrimaryWindow>>,
+    cameras: &Query<(&Camera, &GlobalTransform), With<RapierPickable>>,
+    pointers: &Query<&PointerLocation>,
+    camera_entity: Entity,
+    pointer_id: PointerId,
+) -> Option<Ray> {
+    let (camera, camera_tfm) = cameras.get(camera_entity).ok()?;
+    let pointer_entity = pointer_map.get_entity(pointer_id)?;
+    let pointer_loc = pointers.get(pointer_entity).ok()?;
+    let pointer_loc = pointer_loc.location()?;
+
+    if !camera.is_active || !pointer_loc.is_in_viewport(camera, primary_window) {
+        return None;
+    }
+
+    let mut viewport_pos = pointer_loc.position;
+    if let Some(viewport) = &camera.viewport {
+        viewport_pos -= viewport.physical_position.as_vec2();
+    }
+    camera.viewport_to_world(camera_tfm, viewport_pos)
 }
 
 /// Find the closest pair of points `(p1, p2)` where `p1` is on ray `r1` and
