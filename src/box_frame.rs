@@ -1,7 +1,10 @@
 use crate::drag_face::Dragging;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
-use bevy_rapier3d::prelude::{Collider, Real};
+use parry3d::{
+    bounding_volume::Aabb,
+    na::{Point3, Vector3},
+};
 
 /// The behavioral component of a box frame entity.
 ///
@@ -14,8 +17,8 @@ pub struct BoxFrame {
     /// Material used for a face polyline when there is a pointer over it.
     pub highlight_material: Handle<PolylineMaterial>,
 
-    pub(crate) extents: [Real; 6],
-    pub(crate) min_extent: Real,
+    pub(crate) extents: [f32; 6],
+    pub(crate) min_extent: f32,
     pub(crate) face_entities: [Entity; 6],
     pub(crate) dragging_face: Option<Dragging>,
 }
@@ -33,8 +36,8 @@ impl BoxFrame {
     /// `highlight_material` is used for edges of faces being highlighted,
     /// otherwise `material` is used.
     pub fn build(
-        extents: [Real; 6],
-        min_extent: Real,
+        extents: [f32; 6],
+        min_extent: f32,
         transform: Transform,
         material: Handle<PolylineMaterial>,
         highlight_material: Handle<PolylineMaterial>,
@@ -71,19 +74,20 @@ impl BoxFrame {
                     transform,
                     ..default()
                 },
-                box_frame_collider(extents),
             ));
+    }
+
+    pub fn aabb(&self) -> Aabb {
+        box_frame_aabb(self.extents)
     }
 
     pub(crate) fn update_extents(
         &mut self,
-        new_extents: [Real; 6],
-        collider: &mut Collider,
+        new_extents: [f32; 6],
         line_handles: &mut Query<&mut Handle<Polyline>>,
         polylines: &mut Assets<Polyline>,
     ) {
         self.extents = new_extents;
-        *collider = box_frame_collider(new_extents);
         let new_lines = box_frame_polylines(new_extents);
         for (face_entity, new_line) in self.face_entities.into_iter().zip(new_lines) {
             let Ok(mut line_handle) = line_handles.get_mut(face_entity) else {
@@ -164,17 +168,13 @@ const FACE_QUADS: [[CornerIndex; 4]; 6] = [
     [0b000, 0b001, 0b011, 0b010], // -Z
 ];
 
-fn box_frame_vertices([px, nx, py, ny, pz, nz]: [Real; 6]) -> [Vec3; 8] {
+fn box_frame_vertices([px, nx, py, ny, pz, nz]: [f32; 6]) -> [Vec3; 8] {
     let signed = [px, -nx, py, -ny, pz, -nz];
     CUBE_CORNERS.map(|[x, y, z]| Vec3::new(signed[x], signed[y], signed[z]))
 }
 
-fn box_frame_collider(extents: [Real; 6]) -> Collider {
-    Collider::convex_hull(&box_frame_vertices(extents)).unwrap()
-}
-
 /// A polyline of 4 edges for each face.
-fn box_frame_polylines(extents: [Real; 6]) -> [Polyline; 6] {
+fn box_frame_polylines(extents: [f32; 6]) -> [Polyline; 6] {
     let verts = box_frame_vertices(extents);
     [0, 1, 2, 3, 4, 5].map(|face| {
         let [i0, i1, i2, i3] = FACE_QUADS[face];
@@ -182,6 +182,13 @@ fn box_frame_polylines(extents: [Real; 6]) -> [Polyline; 6] {
             vertices: [i0, i1, i2, i3, i0].map(|corner| verts[corner]).to_vec(),
         }
     })
+}
+
+fn box_frame_aabb([px, nx, py, ny, pz, nz]: [f32; 6]) -> Aabb {
+    let extents = Vector3::new(px + nx, py + ny, pz + nz);
+    let he = 0.5 * extents;
+    let center = 0.5 * Point3::new(px - nx, py - ny, pz - nz);
+    Aabb::from_half_extents(center, he)
 }
 
 pub(crate) fn face_index_from_world_normal(

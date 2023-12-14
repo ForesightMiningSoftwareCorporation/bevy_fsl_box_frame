@@ -9,21 +9,21 @@ authors = ["Duncan Fairbanks <duncan.fairbanks@fslabs.ca>"]
 [dependencies]
 approx = "0.5"
 bevy_polyline = "0.7"
-bevy_rapier3d = "0.22"
+parry3d = "0.13"
 
 [dependencies.bevy]
 version = "0.11"
 default-features = false
-features = ["bevy_winit", "x11"]
 
 [dependencies.bevy_mod_picking]
 version = "0.16"
 default-features = false
-features = ["backend_rapier"]
+
+[dependencies.nalgebra]
+version = "0.32"
+features = ["glam024"]
 
 [[example]]
 name = "demo"
 path = "examples/demo.rs"
-# bevy_mod_picking uses whatever UI feature is enabled for debug drawing (bevy_ui or egui)
-# TODO: why does debug drawing rely on the bevy_ui picking backend?
-required-features = ["bevy_mod_picking/debug", "bevy/bevy_ui", "bevy_mod_picking/backend_bevy_ui"]
+required-features = ["bevy/bevy_winit", "bevy/x11"]

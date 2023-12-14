@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy_fsc_box_frame::{BoxFrame, BoxFramePlugin};
 use bevy_mod_picking::prelude::*;
 use bevy_polyline::prelude::{Polyline, PolylineMaterial};
-use bevy_rapier3d::prelude::*;
 
 fn main() {
     App::new()
@@ -10,7 +9,6 @@ fn main() {
             DefaultPlugins,
             DefaultPickingPlugins,
             bevy_polyline::PolylinePlugin,
-            RapierPhysicsPlugin::<NoUserData>::default(),
             BoxFramePlugin,
         ))
         .add_systems(Startup, setup)
@@ -47,11 +45,8 @@ fn setup(
         &mut commands.spawn(()),
     );
 
-    commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        },
-        RapierPickable,
-    ));
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ..default()
+    });
 }
