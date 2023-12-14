@@ -23,7 +23,8 @@ pub struct BoxFrame {
 impl BoxFrame {
     /// Uses `commands` to build a box frame entity.
     ///
-    /// `faces`: Coordinates of each face along it's normal axis. See [`FaceId`].
+    /// `faces`: Coordinates of each face along it's normal axis. See
+    /// [`FaceIndex`].
     ///
     /// `highlight_material` is used for edges of faces being highlighted,
     /// otherwise `material` is used.
@@ -66,6 +67,10 @@ impl BoxFrame {
 
     pub fn faces(&self) -> [f32; 6] {
         self.faces
+    }
+
+    pub fn center(&self) -> Vec3 {
+        self.aabb().center().into()
     }
 
     pub fn aabb(&self) -> Aabb {

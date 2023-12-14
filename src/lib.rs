@@ -7,7 +7,7 @@
 //! extents. As the pointer hovers over each face, visual feedback is provided
 //! (highlight material).
 //!
-//! Depends on [`bevy_mod_picking::plugins::DefaultPickingPlugins`] and
+//! Depends on [`bevy_mod_picking::DefaultPickingPlugins`] and
 //! [`bevy_polyline::PolylinePlugin`].
 
 mod box_frame;
