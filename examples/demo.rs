@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_fsc_box_frame::{BoxFrame, BoxFramePlugin};
+use bevy_fsl_box_frame::{BoxFrame, BoxFramePlugin};
 use bevy_mod_picking::prelude::*;
 use bevy_polyline::prelude::{Polyline, PolylineMaterial};
 

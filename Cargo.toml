@@ -1,5 +1,5 @@
 [package]
-name = "bevy_fsc_box_frame"
+name = "bevy_fsl_box_frame"
 version = "0.1.0"
 edition = "2021"
 authors = ["Duncan Fairbanks <duncan.fairbanks@fslabs.ca>"]
