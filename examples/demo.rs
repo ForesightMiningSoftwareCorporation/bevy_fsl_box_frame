@@ -33,11 +33,8 @@ fn setup(
     let transform =
         Transform::from_rotation(Quat::from_axis_angle(Vec3::Y, std::f32::consts::FRAC_PI_4));
 
-    let extents = [0.5; 6];
-    let min_extent = 0.05;
     BoxFrame::build(
-        extents,
-        min_extent,
+        [-0.5, -0.5, -0.5, 0.5, 0.5, 0.5],
         transform,
         material,
         highlight_material,

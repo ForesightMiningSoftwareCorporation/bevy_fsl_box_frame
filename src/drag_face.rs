@@ -1,5 +1,5 @@
 use crate::{
-    face_index_from_world_normal,
+    face_index_from_world_normal, face_sign,
     ray_map::{RayId, RayMap},
     BoxFrame, FaceIndex,
 };
@@ -19,8 +19,8 @@ pub(crate) struct Dragging {
     camera_id: Entity,
     // The face being dragged.
     face: FaceIndex,
-    // The face's extent at time of DragStart.
-    initial_extent: f32,
+    // The face's coordinate at time of DragStart.
+    initial_coord: f32,
     // The ray along which the face is translated during dragging. In world
     // coordinates.
     drag_ray: Ray,
@@ -56,7 +56,7 @@ pub(crate) fn drag_face(
             pointer_id: drag_start.pointer_id,
             camera_id: hit_data.camera,
             face,
-            initial_extent: frame.extents[face],
+            initial_coord: frame.faces()[face],
             drag_ray: Ray {
                 origin: world_position,
                 direction: world_normal,
@@ -67,7 +67,7 @@ pub(crate) fn drag_face(
         let Ok(mut frame) = box_frames.get_component_mut::<BoxFrame>(drag_end.target) else {
             continue;
         };
-        frame.dragging_face = None;
+        frame.on_drag_end(&mut line_handles, &mut polylines);
     }
 
     // For all frames currently in the "dragging" state, we need to calculate
@@ -78,26 +78,25 @@ pub(crate) fn drag_face(
             pointer_id,
             camera_id,
             face,
-            initial_extent,
+            initial_coord,
             drag_ray,
-        }) = &frame.dragging_face
+        }) = frame.dragging_face
         else {
             continue;
         };
 
-        let Some(pointer_ray) = ray_map.map().get(&RayId::new(*camera_id, *pointer_id)) else {
+        let Some(pointer_ray) = ray_map.map().get(&RayId::new(camera_id, pointer_id)) else {
             continue;
         };
 
-        // Determine the new frame extents based on the desired position of the
-        // dragging face.
-        let Some((drag_delta, _)) = closest_points_on_two_rays(drag_ray, pointer_ray) else {
+        // Determine the new face coordinates based on the desired position of
+        // the dragging face.
+        let Some((drag_delta, _)) = closest_points_on_two_rays(&drag_ray, pointer_ray) else {
             continue;
         };
-        let mut new_extents = frame.extents;
-        new_extents[*face] = (initial_extent + drag_delta).max(frame.min_extent);
 
-        frame.update_extents(new_extents, &mut line_handles, &mut polylines)
+        frame.set_face_during_drag(face, initial_coord + face_sign(face) * drag_delta);
+        frame.reset_lines(&mut line_handles, &mut polylines)
     }
 }
 

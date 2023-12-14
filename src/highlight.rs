@@ -2,7 +2,7 @@ use crate::{face_index_from_world_normal, BoxFrame};
 use bevy::prelude::*;
 use bevy_mod_picking::{
     events::Pointer,
-    prelude::{Move, Out, Over},
+    prelude::{DragEnd, Move, Out, Over},
 };
 use bevy_polyline::prelude::PolylineMaterial;
 
@@ -10,14 +10,15 @@ pub(crate) fn highlight_face(
     mut over_events: EventReader<Pointer<Over>>,
     mut move_events: EventReader<Pointer<Move>>,
     mut out_events: EventReader<Pointer<Out>>,
+    mut drag_end_events: EventReader<Pointer<DragEnd>>,
     box_frames: Query<(&BoxFrame, &GlobalTransform)>,
     mut line_handles: Query<&mut Handle<PolylineMaterial>>,
 ) {
     // Prioritize highlighting based on faces being dragged.
-    for (box_frame, _) in box_frames.iter() {
-        if let Some(dragging) = &box_frame.dragging_face {
-            box_frame.clear_highlights(&mut line_handles);
-            box_frame.highlight_face(dragging.face(), &mut line_handles);
+    for (frame, _) in &box_frames {
+        if let Some(dragging) = &frame.dragging_face {
+            frame.clear_highlights(&mut line_handles);
+            frame.highlight_face(dragging.face(), &mut line_handles);
         }
     }
 
@@ -28,25 +29,30 @@ pub(crate) fn highlight_face(
         .iter()
         .map(|e| (e.target, Some(e.event.hit.clone())));
     let normalized_out = out_events.iter().map(|e| (e.target, None));
+    let normalized_drag_end = drag_end_events.iter().map(|e| (e.target, None));
 
     // Highlight faces intersecting a pointer ray. "Out" events will clear all
     // highlights.
-    for (target, maybe_pick_data) in normalized_over.chain(normalized_move).chain(normalized_out) {
-        let Ok((box_frame, transform)) = box_frames.get(target) else {
+    for (target, maybe_pick_data) in normalized_over
+        .chain(normalized_move)
+        .chain(normalized_out)
+        .chain(normalized_drag_end)
+    {
+        let Ok((frame, transform)) = box_frames.get(target) else {
             continue;
         };
 
         // Ignore events for entities that are already highlighted based on a
         // dragging face.
-        if box_frame.dragging_face.is_some() {
+        if frame.dragging_face.is_some() {
             continue;
         }
 
-        box_frame.clear_highlights(&mut line_handles);
+        frame.clear_highlights(&mut line_handles);
         if let Some(pick_data) = maybe_pick_data {
             if let Some(world_normal) = pick_data.normal {
                 let picked_face = face_index_from_world_normal(world_normal, transform);
-                box_frame.highlight_face(picked_face, &mut line_handles);
+                frame.highlight_face(picked_face, &mut line_handles);
             }
         }
     }

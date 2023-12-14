@@ -1,10 +1,7 @@
 use crate::drag_face::Dragging;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
-use parry3d::{
-    bounding_volume::Aabb,
-    na::{Point3, Vector3},
-};
+use parry3d::bounding_volume::Aabb;
 
 /// The behavioral component of a box frame entity.
 ///
@@ -17,41 +14,32 @@ pub struct BoxFrame {
     /// Material used for a face polyline when there is a pointer over it.
     pub highlight_material: Handle<PolylineMaterial>,
 
-    pub(crate) extents: [f32; 6],
-    pub(crate) min_extent: f32,
-    pub(crate) face_entities: [Entity; 6],
     pub(crate) dragging_face: Option<Dragging>,
+
+    faces: [f32; 6],
+    face_entities: [Entity; 6],
 }
 
 impl BoxFrame {
     /// Uses `commands` to build a box frame entity.
     ///
-    /// `extents`: Determines the shape of the box. Each value is the
-    /// corresponding face's distance from the center of the box. Indexed by
-    /// [`FaceIndex`].
-    ///
-    /// `min_extent`: A lower bound for any components of `extents`. This
-    /// prevents invalid configurations when dragging a face.
+    /// `faces`: Coordinates of each face along it's normal axis. See [`FaceId`].
     ///
     /// `highlight_material` is used for edges of faces being highlighted,
     /// otherwise `material` is used.
     pub fn build(
-        extents: [f32; 6],
-        min_extent: f32,
+        faces: [f32; 6],
         transform: Transform,
         material: Handle<PolylineMaterial>,
         highlight_material: Handle<PolylineMaterial>,
         polylines: &mut Assets<Polyline>,
         commands: &mut EntityCommands,
     ) {
-        // All extents must be positive.
-        let min_extent = min_extent.max(0.0);
-        let extents = extents.map(|e| e.max(min_extent));
-
+        let faces = sorted_faces(faces);
         let mut face_entities = [Entity::PLACEHOLDER; 6];
         commands
             .with_children(|builder| {
-                for (i, face) in box_frame_polylines(extents).into_iter().enumerate() {
+                for (i, face) in face_polylines(faces).into_iter().enumerate() {
                     face_entities[i] = builder
                         .spawn(PolylineBundle {
                             polyline: polylines.add(face),
@@ -63,12 +51,11 @@ impl BoxFrame {
             })
             .insert((
                 Self {
-                    extents,
-                    min_extent,
+                    faces,
                     face_entities,
                     material,
                     highlight_material,
-                    dragging_face: default(),
+                    dragging_face: None,
                 },
                 SpatialBundle {
                     transform,
@@ -77,18 +64,37 @@ impl BoxFrame {
             ));
     }
 
-    pub fn aabb(&self) -> Aabb {
-        box_frame_aabb(self.extents)
+    pub fn faces(&self) -> [f32; 6] {
+        self.faces
     }
 
-    pub(crate) fn update_extents(
+    pub fn aabb(&self) -> Aabb {
+        aabb_from_faces(self.faces)
+    }
+
+    pub(crate) fn set_face_during_drag(&mut self, face: usize, coord: f32) {
+        // NOTE: We aren't sorting the faces until the drag ends, because this
+        // allows them to pass through each other.
+        self.faces[face] = coord;
+    }
+
+    pub(crate) fn on_drag_end(
         &mut self,
-        new_extents: [f32; 6],
         line_handles: &mut Query<&mut Handle<Polyline>>,
         polylines: &mut Assets<Polyline>,
     ) {
-        self.extents = new_extents;
-        let new_lines = box_frame_polylines(new_extents);
+        self.dragging_face = None;
+        // Sort faces so we can pick the correct face on the next picking event.
+        self.faces = sorted_faces(self.faces);
+        self.reset_lines(line_handles, polylines)
+    }
+
+    pub(crate) fn reset_lines(
+        &self,
+        line_handles: &mut Query<&mut Handle<Polyline>>,
+        polylines: &mut Assets<Polyline>,
+    ) {
+        let new_lines = face_polylines(self.faces);
         for (face_entity, new_line) in self.face_entities.into_iter().zip(new_lines) {
             let Ok(mut line_handle) = line_handles.get_mut(face_entity) else {
                 continue;
@@ -97,9 +103,12 @@ impl BoxFrame {
         }
     }
 
-    pub(crate) fn clear_highlights(&self, line_handles: &mut Query<&mut Handle<PolylineMaterial>>) {
+    pub(crate) fn clear_highlights(
+        &self,
+        material_handles: &mut Query<&mut Handle<PolylineMaterial>>,
+    ) {
         for face_entity in self.face_entities {
-            if let Ok(mut line_handle) = line_handles.get_mut(face_entity) {
+            if let Ok(mut line_handle) = material_handles.get_mut(face_entity) {
                 *line_handle = self.material.clone();
             }
         }
@@ -118,30 +127,38 @@ impl BoxFrame {
 }
 
 /// ```text
-/// 0 = +X
-/// 1 = -X
-/// 2 = +Y
-/// 3 = -Y
-/// 4 = +Z
-/// 5 = -Z
+/// 0 = -X
+/// 1 = -Y
+/// 2 = -Z
+/// 3 = +X
+/// 4 = +Y
+/// 5 = +Z
 /// ```
 pub type FaceIndex = usize;
 
-pub const POS_X: FaceIndex = 0;
-pub const NEG_X: FaceIndex = 1;
-pub const POS_Y: FaceIndex = 2;
-pub const NEG_Y: FaceIndex = 3;
-pub const POS_Z: FaceIndex = 4;
-pub const NEG_Z: FaceIndex = 5;
+pub const NEG_X: FaceIndex = 0;
+pub const NEG_Y: FaceIndex = 1;
+pub const NEG_Z: FaceIndex = 2;
+pub const POS_X: FaceIndex = 3;
+pub const POS_Y: FaceIndex = 4;
+pub const POS_Z: FaceIndex = 5;
 
 const FACE_NORMALS: [Vec3; 6] = [
-    Vec3::X,
     Vec3::NEG_X,
-    Vec3::Y,
     Vec3::NEG_Y,
-    Vec3::Z,
     Vec3::NEG_Z,
+    Vec3::X,
+    Vec3::Y,
+    Vec3::Z,
 ];
+
+pub(crate) fn face_sign(face: FaceIndex) -> f32 {
+    if face < 3 {
+        -1.0
+    } else {
+        1.0
+    }
+}
 
 /// Encoded as `0bZYX`.
 type CornerIndex = usize;
@@ -160,35 +177,44 @@ const CUBE_CORNERS: [[FaceIndex; 3]; 8] = [
 
 /// Indexed by [`FaceIndex`].
 const FACE_QUADS: [[CornerIndex; 4]; 6] = [
-    [0b001, 0b101, 0b111, 0b011], // +X
     [0b000, 0b010, 0b110, 0b100], // -X
-    [0b010, 0b011, 0b111, 0b110], // +Y
     [0b000, 0b100, 0b101, 0b001], // -Y
-    [0b100, 0b110, 0b111, 0b101], // +Z
     [0b000, 0b001, 0b011, 0b010], // -Z
+    [0b001, 0b101, 0b111, 0b011], // +X
+    [0b010, 0b011, 0b111, 0b110], // +Y
+    [0b100, 0b110, 0b111, 0b101], // +Z
 ];
 
-fn box_frame_vertices([px, nx, py, ny, pz, nz]: [f32; 6]) -> [Vec3; 8] {
-    let signed = [px, -nx, py, -ny, pz, -nz];
-    CUBE_CORNERS.map(|[x, y, z]| Vec3::new(signed[x], signed[y], signed[z]))
+fn sorted_faces(faces: [f32; 6]) -> [f32; 6] {
+    let [x1, y1, z1, x2, y2, z2] = faces;
+    [
+        x1.min(x2),
+        y1.min(y2),
+        z1.min(z2),
+        x1.max(x2),
+        y1.max(y2),
+        z1.max(z2),
+    ]
+}
+
+fn aabb_from_faces(faces: [f32; 6]) -> Aabb {
+    let [x1, y1, z1, x2, y2, z2] = sorted_faces(faces);
+    Aabb::new([x1, y1, z1].into(), [x2, y2, z2].into())
+}
+
+fn corner_vertices(faces: [f32; 6]) -> [Vec3; 8] {
+    CUBE_CORNERS.map(|[x, y, z]| Vec3::new(faces[x], faces[y], faces[z]))
 }
 
 /// A polyline of 4 edges for each face.
-fn box_frame_polylines(extents: [f32; 6]) -> [Polyline; 6] {
-    let verts = box_frame_vertices(extents);
+fn face_polylines(faces: [f32; 6]) -> [Polyline; 6] {
+    let verts = corner_vertices(faces);
     [0, 1, 2, 3, 4, 5].map(|face| {
         let [i0, i1, i2, i3] = FACE_QUADS[face];
         Polyline {
             vertices: [i0, i1, i2, i3, i0].map(|corner| verts[corner]).to_vec(),
         }
     })
-}
-
-fn box_frame_aabb([px, nx, py, ny, pz, nz]: [f32; 6]) -> Aabb {
-    let extents = Vector3::new(px + nx, py + ny, pz + nz);
-    let he = 0.5 * extents;
-    let center = 0.5 * Point3::new(px - nx, py - ny, pz - nz);
-    Aabb::from_half_extents(center, he)
 }
 
 pub(crate) fn face_index_from_world_normal(

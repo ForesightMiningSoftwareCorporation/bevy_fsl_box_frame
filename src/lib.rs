@@ -35,6 +35,7 @@ impl Plugin for BoxFramePlugin {
         app.init_resource::<RayMap>()
             .add_systems(PreUpdate, RayMap::repopulate.in_set(PickSet::ProcessInput))
             .add_systems(PreUpdate, box_frame_backend.in_set(PickSet::Backend))
-            .add_systems(Update, (highlight_face, drag_face));
+            // Correct highlighting updates depend on the state of dragging.
+            .add_systems(Update, (drag_face, highlight_face).chain());
     }
 }
