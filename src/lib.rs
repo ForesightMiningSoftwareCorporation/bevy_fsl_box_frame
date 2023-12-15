@@ -15,13 +15,15 @@ mod drag_face;
 mod handle_visibility;
 mod highlight;
 mod picking_backend;
+mod solid_color_material;
 
 // TODO: remove this for bevy_mod_picking 0.17.1
 mod ray_map;
 
 pub use box_frame::*;
+pub use solid_color_material::*;
 
-use bevy::prelude::{IntoSystemConfigs, Plugin, PreUpdate, Update};
+use bevy::prelude::{IntoSystemConfigs, MaterialPlugin, Plugin, PreUpdate, Update};
 use bevy_mod_picking::picking_core::PickSet;
 use drag_face::*;
 use handle_visibility::*;
@@ -34,7 +36,8 @@ pub struct BoxFramePlugin;
 
 impl Plugin for BoxFramePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.init_resource::<RayMap>()
+        app.add_plugins(MaterialPlugin::<SolidColorMaterial>::default())
+            .init_resource::<RayMap>()
             .add_systems(PreUpdate, RayMap::repopulate.in_set(PickSet::ProcessInput))
             .add_systems(PreUpdate, box_frame_backend.in_set(PickSet::Backend))
             .add_systems(Update, (handle_visibility, highlight_handles))

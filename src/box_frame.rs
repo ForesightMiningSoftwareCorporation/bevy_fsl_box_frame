@@ -1,4 +1,4 @@
-use crate::drag_face::Dragging;
+use crate::{drag_face::Dragging, solid_color_material::SolidColorMaterial};
 use bevy::{ecs::system::EntityCommands, prelude::*, utils::FloatOrd};
 use bevy_mod_picking::prelude::Pickable;
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
@@ -27,7 +27,7 @@ pub struct BoxFrameVisuals {
     pub edge_highlight_material: Handle<PolylineMaterial>,
 
     pub handle_mesh: Handle<Mesh>,
-    pub handle_material: Handle<StandardMaterial>,
+    pub handle_material: Handle<SolidColorMaterial>,
     pub handle_scale: f32,
     pub handle_hover_scale: f32,
 }
@@ -43,12 +43,8 @@ impl BoxFrameVisuals {
     pub fn new_default(
         line_materials: &mut Assets<PolylineMaterial>,
         meshes: &mut Assets<Mesh>,
-        materials: &mut Assets<StandardMaterial>,
+        materials: &mut Assets<SolidColorMaterial>,
     ) -> Self {
-        // TODO: use a simpler material than PBR
-        let mut handle_material = StandardMaterial::from(Color::RED);
-        handle_material.unlit = true;
-
         Self {
             edge_material: line_materials.add(PolylineMaterial {
                 width: 1.0,
@@ -60,7 +56,7 @@ impl BoxFrameVisuals {
             }),
 
             handle_mesh: meshes.add(shape::Icosphere::default().try_into().unwrap()),
-            handle_material: materials.add(handle_material),
+            handle_material: materials.add(Color::RED.into()),
             handle_scale: 0.05,
             handle_hover_scale: 0.08,
         }
@@ -98,7 +94,7 @@ impl BoxFrame {
                     face_centers(faces).into_iter().zip(&mut handle_entities)
                 {
                     *entity = builder
-                        .spawn(PbrBundle {
+                        .spawn(MaterialMeshBundle {
                             mesh: visuals.handle_mesh.clone(),
                             material: visuals.handle_material.clone(),
                             transform: Transform::default()

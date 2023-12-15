@@ -1,5 +1,5 @@
-use bevy::{core_pipeline::tonemapping::Tonemapping, prelude::*};
-use bevy_fsl_box_frame::{BoxFrame, BoxFramePlugin, BoxFrameVisuals};
+use bevy::prelude::*;
+use bevy_fsl_box_frame::{BoxFrame, BoxFramePlugin, BoxFrameVisuals, SolidColorMaterial};
 use bevy_mod_picking::prelude::*;
 use bevy_polyline::prelude::{Polyline, PolylineMaterial};
 
@@ -20,7 +20,7 @@ fn setup(
     mut line_materials: ResMut<Assets<PolylineMaterial>>,
     mut polylines: ResMut<Assets<Polyline>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<SolidColorMaterial>>,
 ) {
     let visuals = BoxFrameVisuals::new_default(&mut line_materials, &mut meshes, &mut materials);
 
@@ -38,7 +38,6 @@ fn setup(
 
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        tonemapping: Tonemapping::None,
         ..default()
     });
 }
