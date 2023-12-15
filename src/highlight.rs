@@ -1,4 +1,4 @@
-use crate::{face_index_from_world_normal, BoxFrame};
+use crate::{face_index_from_world_normal, BoxFrame, BoxFrameHandle};
 use bevy::prelude::*;
 use bevy_mod_picking::{
     events::Pointer,
@@ -55,5 +55,24 @@ pub(crate) fn highlight_face(
                 frame.highlight_face(picked_face, &mut line_handles);
             }
         }
+    }
+}
+
+pub(crate) fn highlight_handles(
+    mut over_events: EventReader<Pointer<Over>>,
+    mut out_events: EventReader<Pointer<Out>>,
+    mut handles: Query<(&BoxFrameHandle, &mut Transform)>,
+) {
+    for over in over_events.iter() {
+        let Ok((handle, mut tfm)) = handles.get_mut(over.target) else {
+            continue;
+        };
+        tfm.scale = Vec3::splat(handle.base_radius * handle.hover_scale);
+    }
+    for out in out_events.iter() {
+        let Ok((handle, mut tfm)) = handles.get_mut(out.target) else {
+            continue;
+        };
+        tfm.scale = Vec3::splat(handle.base_radius * handle.scale);
     }
 }

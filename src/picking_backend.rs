@@ -6,7 +6,7 @@ use bevy::{
 use bevy_mod_picking::backend::{HitData, PointerHits};
 use parry3d::{na::Isometry3, query::RayCast};
 
-/// Generates pointer hits for the box frame's AABB.
+/// Generates pointer hits for the box frame's AABB and handles.
 pub(crate) fn box_frame_backend(
     ray_map: Res<RayMap>,
     cameras: Query<&Camera>,
@@ -22,11 +22,11 @@ pub(crate) fn box_frame_backend(
         let ray = parry3d::query::Ray::new(ray.origin.into(), ray.direction.into());
 
         let mut picks = Vec::new();
-        for (entity, frame, frame_transform) in &box_frames {
+        for (frame_entity, frame, frame_transform) in &box_frames {
             let world_frame_center = frame_transform.transform_point(frame.center());
             // Check handle intersections first, they always take priority.
             let ball = frame.handle_ball();
-            if let Some((toi, world_handle_center)) = frame
+            if let Some((toi, handle_entity, world_handle_center)) = frame
                 .handle_entities()
                 .into_iter()
                 .filter_map(|handle_entity| {
@@ -35,18 +35,26 @@ pub(crate) fn box_frame_backend(
                     ball.cast_ray(&isometry, &ray, f32::INFINITY, true)
                         .map(|toi| {
                             let world_handle_center = transform.translation();
-                            (toi, world_handle_center)
+                            (toi, handle_entity, world_handle_center)
                         })
                 })
                 .reduce(|t1, t2| if t1.0 < t2.0 { t1 } else { t2 })
             {
                 let world_normal = (world_handle_center - world_frame_center).normalize();
+                let intersect_p = ray.point_at(toi);
+                // HACK: bevy_mod_picking seems to have a bug where equal depth
+                // values alias and one hit gets dropped
+                let fudge = 0.001;
                 picks.push((
-                    entity,
+                    handle_entity,
+                    HitData::new(ray_id.camera, toi - fudge, Some(intersect_p.into()), None),
+                ));
+                picks.push((
+                    frame_entity,
                     HitData::new(
                         ray_id.camera,
                         toi,
-                        Some(ray.point_at(toi).into()),
+                        Some(intersect_p.into()),
                         Some(world_normal),
                     ),
                 ));
@@ -61,7 +69,7 @@ pub(crate) fn box_frame_backend(
                     .cast_ray_and_get_normal(&isometry, &ray, f32::INFINITY, true)
             {
                 picks.push((
-                    entity,
+                    frame_entity,
                     HitData::new(
                         ray_id.camera,
                         hit.toi,

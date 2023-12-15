@@ -1,7 +1,7 @@
 use crate::{
     face_index_from_world_normal, face_sign,
     ray_map::{RayId, RayMap},
-    BoxFrame, FaceIndex,
+    BoxFrame, BoxFrameHandle, FaceIndex,
 };
 use approx::relative_eq;
 use bevy::prelude::*;
@@ -40,7 +40,7 @@ pub(crate) fn drag_face(
     mut polylines: ResMut<Assets<Polyline>>,
     mut box_frames: Query<(&mut BoxFrame, &GlobalTransform)>,
     mut line_handles: Query<&mut Handle<Polyline>>,
-    mut transforms: Query<&mut Transform>,
+    mut handles: Query<(&mut BoxFrameHandle, &mut Transform)>,
 ) {
     // Start or stop the dragging state machine based on events.
     for drag_start in drag_start_events.iter() {
@@ -98,7 +98,7 @@ pub(crate) fn drag_face(
 
         // NOTE: Assumes drag_ray is a unit vector.
         frame.set_face_during_drag(face, initial_coord + face_sign(face) * drag_delta);
-        frame.transform_handles(&mut transforms);
+        frame.transform_handles(&mut handles);
         frame.reset_lines(&mut line_handles, &mut polylines)
     }
 }

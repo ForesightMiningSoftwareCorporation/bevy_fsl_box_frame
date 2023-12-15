@@ -1,5 +1,6 @@
 use crate::drag_face::Dragging;
 use bevy::{ecs::system::EntityCommands, prelude::*, utils::FloatOrd};
+use bevy_mod_picking::prelude::Pickable;
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
 use parry3d::{bounding_volume::Aabb, shape::Ball};
 
@@ -28,6 +29,14 @@ pub struct BoxFrameVisuals {
     pub handle_mesh: Handle<Mesh>,
     pub handle_material: Handle<StandardMaterial>,
     pub handle_scale: f32,
+    pub handle_hover_scale: f32,
+}
+
+#[derive(Component)]
+pub struct BoxFrameHandle {
+    pub base_radius: f32,
+    pub scale: f32,
+    pub hover_scale: f32,
 }
 
 impl BoxFrameVisuals {
@@ -53,6 +62,7 @@ impl BoxFrameVisuals {
             handle_mesh: meshes.add(shape::Icosphere::default().try_into().unwrap()),
             handle_material: materials.add(handle_material),
             handle_scale: 0.05,
+            handle_hover_scale: 0.08,
         }
     }
 }
@@ -70,6 +80,7 @@ impl BoxFrame {
         commands: &mut EntityCommands,
     ) {
         let faces = sorted_faces(faces);
+        let handle_base_radius = median_extent(box_extents(faces));
         let mut face_entities = [Entity::PLACEHOLDER; 6];
         let mut handle_entities = [Entity::PLACEHOLDER; 6];
         commands
@@ -96,6 +107,17 @@ impl BoxFrame {
                             visibility: Visibility::Hidden,
                             ..default()
                         })
+                        .insert((
+                            BoxFrameHandle {
+                                base_radius: handle_base_radius,
+                                scale: visuals.handle_scale,
+                                hover_scale: visuals.handle_hover_scale,
+                            },
+                            Pickable {
+                                should_block_lower: false,
+                                should_emit_events: true,
+                            },
+                        ))
                         .id();
                 }
             })
@@ -110,6 +132,10 @@ impl BoxFrame {
                 SpatialBundle {
                     transform,
                     ..default()
+                },
+                Pickable {
+                    should_block_lower: false,
+                    should_emit_events: true,
                 },
             ));
     }
@@ -131,7 +157,7 @@ impl BoxFrame {
     }
 
     pub fn handle_ball(&self) -> Ball {
-        Ball::new(self.handle_radius())
+        Ball::new(self.visuals.handle_scale * self.median_extent())
     }
 
     pub fn handle_entities(&self) -> [Entity; 6] {
@@ -155,23 +181,24 @@ impl BoxFrame {
         self.reset_lines(line_handles, polylines)
     }
 
-    pub(crate) fn handle_radius(&self) -> f32 {
-        // Radius is a function of the median extent.
-        let mut extents = box_extents(self.faces);
-        extents.sort_unstable_by_key(|&x| FloatOrd(x));
-        self.visuals.handle_scale * extents[1]
+    pub(crate) fn median_extent(&self) -> f32 {
+        median_extent(box_extents(self.faces))
     }
 
-    pub(crate) fn transform_handles(&mut self, transforms: &mut Query<&mut Transform>) {
-        let radius = self.handle_radius();
+    pub(crate) fn transform_handles(
+        &mut self,
+        handles: &mut Query<(&mut BoxFrameHandle, &mut Transform)>,
+    ) {
+        let base_radius = self.median_extent();
         for (face_center, handle_entity) in
             self.face_centers().into_iter().zip(self.handle_entities)
         {
-            let Ok(mut handle_tfm) = transforms.get_mut(handle_entity) else {
+            let Ok((mut handle, mut handle_tfm)) = handles.get_mut(handle_entity) else {
                 return;
             };
+            handle.base_radius = base_radius;
             handle_tfm.translation = face_center;
-            handle_tfm.scale = Vec3::splat(radius);
+            handle_tfm.scale = Vec3::splat(handle.scale * handle.base_radius);
         }
     }
 
@@ -304,6 +331,11 @@ fn face_centers(faces: [f32; 6]) -> [Vec3; 6] {
 fn box_extents(faces: [f32; 6]) -> [f32; 3] {
     let [x1, y1, z1, x2, y2, z2] = sorted_faces(faces);
     [(x2 - x1).abs(), (y2 - y1).abs(), (z2 - z1).abs()]
+}
+
+fn median_extent(mut extents: [f32; 3]) -> f32 {
+    extents.sort_unstable_by_key(|&x| FloatOrd(x));
+    extents[1]
 }
 
 fn corner_vertices(faces: [f32; 6]) -> [Vec3; 8] {
