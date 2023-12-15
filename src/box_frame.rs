@@ -93,6 +93,7 @@ impl BoxFrame {
                             transform: Transform::default()
                                 .with_translation(handle_center)
                                 .with_scale(Vec3::splat(visuals.handle_scale)),
+                            visibility: Visibility::Hidden,
                             ..default()
                         })
                         .id();

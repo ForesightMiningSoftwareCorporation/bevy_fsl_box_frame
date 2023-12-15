@@ -12,6 +12,7 @@
 
 mod box_frame;
 mod drag_face;
+mod handle_visibility;
 mod highlight;
 mod picking_backend;
 
@@ -23,6 +24,7 @@ pub use box_frame::*;
 use bevy::prelude::{IntoSystemConfigs, Plugin, PreUpdate, Update};
 use bevy_mod_picking::picking_core::PickSet;
 use drag_face::*;
+use handle_visibility::*;
 use highlight::*;
 use picking_backend::box_frame_backend;
 use ray_map::RayMap;
@@ -35,6 +37,7 @@ impl Plugin for BoxFramePlugin {
         app.init_resource::<RayMap>()
             .add_systems(PreUpdate, RayMap::repopulate.in_set(PickSet::ProcessInput))
             .add_systems(PreUpdate, box_frame_backend.in_set(PickSet::Backend))
+            .add_systems(Update, handle_visibility)
             // Correct highlighting updates depend on the state of dragging.
             .add_systems(Update, (drag_face, highlight_face).chain());
     }
