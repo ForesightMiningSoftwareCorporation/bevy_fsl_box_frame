@@ -37,9 +37,10 @@ pub(crate) fn drag_face(
     mut drag_start_events: EventReader<Pointer<DragStart>>,
     mut drag_end_events: EventReader<Pointer<DragEnd>>,
     ray_map: Res<RayMap>,
+    mut polylines: ResMut<Assets<Polyline>>,
     mut box_frames: Query<(&mut BoxFrame, &GlobalTransform)>,
     mut line_handles: Query<&mut Handle<Polyline>>,
-    mut polylines: ResMut<Assets<Polyline>>,
+    mut transforms: Query<&mut Transform>,
 ) {
     // Start or stop the dragging state machine based on events.
     for drag_start in drag_start_events.iter() {
@@ -95,7 +96,9 @@ pub(crate) fn drag_face(
             continue;
         };
 
+        // NOTE: Assumes drag_ray is a unit vector.
         frame.set_face_during_drag(face, initial_coord + face_sign(face) * drag_delta);
+        frame.transform_handles(&mut transforms);
         frame.reset_lines(&mut line_handles, &mut polylines)
     }
 }

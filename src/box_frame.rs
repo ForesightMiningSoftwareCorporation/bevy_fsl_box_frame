@@ -1,7 +1,7 @@
 use crate::drag_face::Dragging;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{ecs::system::EntityCommands, prelude::*, utils::FloatOrd};
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
-use parry3d::bounding_volume::Aabb;
+use parry3d::{bounding_volume::Aabb, shape::Ball};
 
 /// The behavioral component of a box frame entity.
 ///
@@ -9,15 +9,52 @@ use parry3d::bounding_volume::Aabb;
 /// [`BoxFrame::build`].
 #[derive(Component)]
 pub struct BoxFrame {
-    /// Material used when there are no pointers over the box.
-    pub material: Handle<PolylineMaterial>,
-    /// Material used for a face polyline when there is a pointer over it.
-    pub highlight_material: Handle<PolylineMaterial>,
+    pub visuals: BoxFrameVisuals,
 
     pub(crate) dragging_face: Option<Dragging>,
 
     faces: [f32; 6],
     face_entities: [Entity; 6],
+    handle_entities: [Entity; 6],
+}
+
+#[derive(Clone)]
+pub struct BoxFrameVisuals {
+    /// Material used for frame edges.
+    pub edge_material: Handle<PolylineMaterial>,
+    /// Material used for highlighting frame handles.
+    pub edge_highlight_material: Handle<PolylineMaterial>,
+
+    pub handle_mesh: Handle<Mesh>,
+    pub handle_material: Handle<StandardMaterial>,
+    pub handle_scale: f32,
+}
+
+impl BoxFrameVisuals {
+    pub fn new_default(
+        line_materials: &mut Assets<PolylineMaterial>,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+    ) -> Self {
+        // TODO: use a simpler material than PBR
+        let mut handle_material = StandardMaterial::from(Color::RED);
+        handle_material.unlit = true;
+
+        Self {
+            edge_material: line_materials.add(PolylineMaterial {
+                width: 1.0,
+                ..default()
+            }),
+            edge_highlight_material: line_materials.add(PolylineMaterial {
+                width: 3.0,
+                ..default()
+            }),
+
+            handle_mesh: meshes.add(shape::Icosphere::default().try_into().unwrap()),
+            handle_material: materials.add(handle_material),
+            handle_scale: 0.05,
+        }
+    }
 }
 
 impl BoxFrame {
@@ -25,26 +62,37 @@ impl BoxFrame {
     ///
     /// `faces`: Coordinates of each face along it's normal axis. See
     /// [`FaceIndex`].
-    ///
-    /// `highlight_material` is used for edges of faces being highlighted,
-    /// otherwise `material` is used.
     pub fn build(
         faces: [f32; 6],
         transform: Transform,
-        material: Handle<PolylineMaterial>,
-        highlight_material: Handle<PolylineMaterial>,
+        visuals: BoxFrameVisuals,
         polylines: &mut Assets<Polyline>,
         commands: &mut EntityCommands,
     ) {
         let faces = sorted_faces(faces);
         let mut face_entities = [Entity::PLACEHOLDER; 6];
+        let mut handle_entities = [Entity::PLACEHOLDER; 6];
         commands
             .with_children(|builder| {
-                for (i, face) in face_polylines(faces).into_iter().enumerate() {
-                    face_entities[i] = builder
+                for (face, entity) in face_polylines(faces).into_iter().zip(&mut face_entities) {
+                    *entity = builder
                         .spawn(PolylineBundle {
                             polyline: polylines.add(face),
-                            material: material.clone(),
+                            material: visuals.edge_material.clone(),
+                            ..default()
+                        })
+                        .id();
+                }
+                for (handle_center, entity) in
+                    face_centers(faces).into_iter().zip(&mut handle_entities)
+                {
+                    *entity = builder
+                        .spawn(PbrBundle {
+                            mesh: visuals.handle_mesh.clone(),
+                            material: visuals.handle_material.clone(),
+                            transform: Transform::default()
+                                .with_translation(handle_center)
+                                .with_scale(Vec3::splat(visuals.handle_scale)),
                             ..default()
                         })
                         .id();
@@ -54,8 +102,8 @@ impl BoxFrame {
                 Self {
                     faces,
                     face_entities,
-                    material,
-                    highlight_material,
+                    handle_entities,
+                    visuals,
                     dragging_face: None,
                 },
                 SpatialBundle {
@@ -77,6 +125,18 @@ impl BoxFrame {
         aabb_from_faces(self.faces)
     }
 
+    pub fn face_centers(&self) -> [Vec3; 6] {
+        face_centers(self.faces)
+    }
+
+    pub fn handle_ball(&self) -> Ball {
+        Ball::new(self.handle_radius())
+    }
+
+    pub fn handle_entities(&self) -> [Entity; 6] {
+        self.handle_entities
+    }
+
     pub(crate) fn set_face_during_drag(&mut self, face: usize, coord: f32) {
         // NOTE: We aren't sorting the faces until the drag ends, because this
         // allows them to pass through each other.
@@ -92,6 +152,26 @@ impl BoxFrame {
         // Sort faces so we can pick the correct face on the next picking event.
         self.faces = sorted_faces(self.faces);
         self.reset_lines(line_handles, polylines)
+    }
+
+    pub(crate) fn handle_radius(&self) -> f32 {
+        // Radius is a function of the median extent.
+        let mut extents = box_extents(self.faces);
+        extents.sort_unstable_by_key(|&x| FloatOrd(x));
+        self.visuals.handle_scale * extents[1]
+    }
+
+    pub(crate) fn transform_handles(&mut self, transforms: &mut Query<&mut Transform>) {
+        let radius = self.handle_radius();
+        for (face_center, handle_entity) in
+            self.face_centers().into_iter().zip(self.handle_entities)
+        {
+            let Ok(mut handle_tfm) = transforms.get_mut(handle_entity) else {
+                return;
+            };
+            handle_tfm.translation = face_center;
+            handle_tfm.scale = Vec3::splat(radius);
+        }
     }
 
     pub(crate) fn reset_lines(
@@ -114,7 +194,7 @@ impl BoxFrame {
     ) {
         for face_entity in self.face_entities {
             if let Ok(mut line_handle) = material_handles.get_mut(face_entity) {
-                *line_handle = self.material.clone();
+                *line_handle = self.visuals.edge_material.clone();
             }
         }
     }
@@ -126,7 +206,7 @@ impl BoxFrame {
     ) {
         // Highlight the picked face.
         if let Ok(mut line_handle) = line_handles.get_mut(self.face_entities[face]) {
-            *line_handle = self.highlight_material.clone();
+            *line_handle = self.visuals.edge_highlight_material.clone();
         }
     }
 }
@@ -205,6 +285,24 @@ fn sorted_faces(faces: [f32; 6]) -> [f32; 6] {
 fn aabb_from_faces(faces: [f32; 6]) -> Aabb {
     let [x1, y1, z1, x2, y2, z2] = sorted_faces(faces);
     Aabb::new([x1, y1, z1].into(), [x2, y2, z2].into())
+}
+
+fn face_centers(faces: [f32; 6]) -> [Vec3; 6] {
+    let [x1, y1, z1, x2, y2, z2] = sorted_faces(faces);
+    let c = 0.5 * Vec3::new(x1 + x2, y1 + y2, z1 + z2);
+    [
+        Vec3::new(x1, c.y, c.z),
+        Vec3::new(x2, c.y, c.z),
+        Vec3::new(c.x, y1, c.z),
+        Vec3::new(c.x, y2, c.z),
+        Vec3::new(c.x, c.y, z1),
+        Vec3::new(c.x, c.y, z2),
+    ]
+}
+
+fn box_extents(faces: [f32; 6]) -> [f32; 3] {
+    let [x1, y1, z1, x2, y2, z2] = sorted_faces(faces);
+    [(x2 - x1).abs(), (y2 - y1).abs(), (z2 - z1).abs()]
 }
 
 fn corner_vertices(faces: [f32; 6]) -> [Vec3; 8] {
