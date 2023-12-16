@@ -1,8 +1,16 @@
 [package]
 name = "bevy_fsl_box_frame"
 version = "0.1.0"
+description = "A gizmo for manipulating an OBB via 3D picking"
 edition = "2021"
 authors = ["Duncan Fairbanks <duncan.fairbanks@fslabs.ca>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ForesightMiningSoftwareCorporation/bevy_fsl_box_frame"
+homepage = "https://github.com/ForesightMiningSoftwareCorporation/bevy_fsl_box_frame"
+documentation = "https://docs.rs/bevy_fsl_box_frame"
+readme = "README.md"
+keywords = ["bevy", "gizmo"]
+categories = ["3D", "game-development"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
