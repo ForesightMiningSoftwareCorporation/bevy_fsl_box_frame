@@ -1,6 +1,6 @@
 use crate::{drag_face::Dragging, solid_color_material::SolidColorMaterial};
 use bevy::{ecs::system::EntityCommands, prelude::*, utils::FloatOrd};
-use bevy_mod_picking::prelude::Pickable;
+use bevy_mod_picking::prelude::{Pickable, PointerButton};
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
 use parry3d::{bounding_volume::Aabb, shape::Ball};
 
@@ -10,6 +10,7 @@ use parry3d::{bounding_volume::Aabb, shape::Ball};
 /// [`BoxFrame::build`].
 #[derive(Component)]
 pub struct BoxFrame {
+    pub drag_button: PointerButton,
     pub visuals: BoxFrameVisuals,
 
     pub(crate) dragging_face: Option<Dragging>,
@@ -71,6 +72,7 @@ impl BoxFrame {
     pub fn build(
         faces: [f32; 6],
         transform: Transform,
+        drag_button: PointerButton,
         visuals: BoxFrameVisuals,
         polylines: &mut Assets<Polyline>,
         commands: &mut EntityCommands,
@@ -122,6 +124,7 @@ impl BoxFrame {
                     faces,
                     face_entities,
                     handle_entities,
+                    drag_button,
                     visuals,
                     dragging_face: None,
                 },

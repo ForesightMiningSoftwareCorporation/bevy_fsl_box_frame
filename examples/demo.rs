@@ -31,6 +31,7 @@ fn setup(
     BoxFrame::build(
         [-0.5, -0.5, -0.5, 0.5, 0.5, 0.5],
         transform,
+        PointerButton::Primary,
         visuals,
         &mut polylines,
         &mut commands.spawn(()),

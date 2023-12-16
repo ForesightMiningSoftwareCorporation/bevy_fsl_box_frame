@@ -45,6 +45,9 @@ pub(crate) fn drag_face(
         let Ok((mut frame, transform)) = box_frames.get_mut(drag_start.target) else {
             continue;
         };
+        if drag_start.event.button != frame.drag_button {
+            continue;
+        }
         let hit_data = &drag_start.event.hit;
         let (Some(world_position), Some(world_normal)) = (hit_data.position, hit_data.normal)
         else {
