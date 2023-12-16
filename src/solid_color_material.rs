@@ -4,9 +4,11 @@ use bevy::{
     render::render_resource::{AsBindGroup, ShaderRef},
 };
 
-pub const SHADER_HANDLE: HandleUntyped =
+pub(crate) const SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 7825413687727800356);
 
+/// A mesh material that only outputs a single color.
+#[allow(missing_docs)]
 #[derive(AsBindGroup, Clone, Debug, TypePath, TypeUuid)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
 pub struct SolidColorMaterial {

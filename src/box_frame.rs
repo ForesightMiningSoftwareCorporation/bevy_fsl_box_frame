@@ -10,7 +10,9 @@ use parry3d::{bounding_volume::Aabb, shape::Ball};
 /// [`BoxFrame::build`].
 #[derive(Component)]
 pub struct BoxFrame {
+    /// The button that triggers face dragging.
     pub drag_button: PointerButton,
+    /// Assets and configuration for how the gizmo is rendered.
     pub visuals: BoxFrameVisuals,
 
     pub(crate) dragging_face: Option<Dragging>,
@@ -20,27 +22,47 @@ pub struct BoxFrame {
     handle_entities: [Entity; 6],
 }
 
+/// Assets and configuration for how the gizmo is rendered.
 #[derive(Clone)]
 pub struct BoxFrameVisuals {
     /// Material used for frame edges.
     pub edge_material: Handle<PolylineMaterial>,
     /// Material used for highlighting frame handles.
     pub edge_highlight_material: Handle<PolylineMaterial>,
-
+    /// Mesh used to render a face handle.
     pub handle_mesh: Handle<Mesh>,
+    /// Material used to render a face handle.
     pub handle_material: Handle<SolidColorMaterial>,
-    pub handle_scale: f32,
+    /// The scaling factor applied to a handle's [`Transform`] when there is no
+    /// pointer hovering over it.
+    pub handle_scale: ScalingFn,
+    /// An extra scaling factor applied to a handle's [`Transform`] when there
+    /// is a pointer hovering over it.
+    ///
+    /// For example, a factor of `2.0` would cause the handle to appear twice
+    /// the size when hovering over it.
     pub handle_hover_scale: f32,
 }
 
+/// Given the box frame's current extents, returns the desired scaling factor of
+/// the handle's [`Transform`].
+///
+/// The scaling factor should be considered equivalent to the radius of the
+/// default handle mesh (a sphere). Note that the picking intersection test uses
+/// a unit-radius ball scaled by this function, so if you are using a custom
+/// mesh, you must account for its perceived radius.
+pub type ScalingFn = fn([f32; 3]) -> f32;
+
 #[derive(Component)]
-pub struct BoxFrameHandle {
-    pub base_radius: f32,
-    pub scale: f32,
+pub(crate) struct BoxFrameHandle {
+    pub base_scale: f32,
     pub hover_scale: f32,
 }
 
 impl BoxFrameVisuals {
+    /// Creates default assets for rendering a box frame.
+    ///
+    /// This can be replaced by user-specified assets.
     pub fn new_default(
         line_materials: &mut Assets<PolylineMaterial>,
         meshes: &mut Assets<Mesh>,
@@ -58,8 +80,8 @@ impl BoxFrameVisuals {
 
             handle_mesh: meshes.add(shape::Icosphere::default().try_into().unwrap()),
             handle_material: materials.add(Color::RED.into()),
-            handle_scale: 0.05,
-            handle_hover_scale: 0.08,
+            handle_scale: |e| 0.05 * median3(e),
+            handle_hover_scale: 1.2,
         }
     }
 }
@@ -78,7 +100,8 @@ impl BoxFrame {
         commands: &mut EntityCommands,
     ) {
         let faces = sorted_faces(faces);
-        let handle_base_radius = median_extent(box_extents(faces));
+        let extents = box_extents(faces);
+        let base_scale = (visuals.handle_scale)(extents);
         let mut face_entities = [Entity::PLACEHOLDER; 6];
         let mut handle_entities = [Entity::PLACEHOLDER; 6];
         commands
@@ -101,14 +124,13 @@ impl BoxFrame {
                             material: visuals.handle_material.clone(),
                             transform: Transform::default()
                                 .with_translation(handle_center)
-                                .with_scale(Vec3::splat(visuals.handle_scale)),
+                                .with_scale(Vec3::splat((visuals.handle_scale)(extents))),
                             visibility: Visibility::Hidden,
                             ..default()
                         })
                         .insert((
                             BoxFrameHandle {
-                                base_radius: handle_base_radius,
-                                scale: visuals.handle_scale,
+                                base_scale,
                                 hover_scale: visuals.handle_hover_scale,
                             },
                             Pickable {
@@ -139,31 +161,47 @@ impl BoxFrame {
             ));
     }
 
+    /// The coordinates of each face. See [`FaceIndex`].
+    ///
+    /// WARNING: While dragging a face, the minimum and maximum values along one
+    /// axis may swap places in order to stay consistent with the face indices
+    /// used at the start of the drag. This is intentional, but if you don't
+    /// want this, use `self.sorted_faces()`.
     pub fn faces(&self) -> [f32; 6] {
         self.faces
     }
 
+    /// Same as `self.faces()`, but the relative order of minimum and
+    /// maximum values along each axis is always `min < max`, as specified by
+    /// [`FaceIndex`].
     pub fn sorted_faces(&self) -> [f32; 6] {
         sorted_faces(self.faces)
     }
 
+    /// The center of the box's AABB in local coordinates.
     pub fn center(&self) -> Vec3 {
         self.aabb().center().into()
     }
 
-    pub fn aabb(&self) -> Aabb {
+    /// The full extents of the box along each axis.
+    pub fn extents(&self) -> [f32; 3] {
+        box_extents(self.faces)
+    }
+
+    pub(crate) fn aabb(&self) -> Aabb {
         aabb_from_faces(self.faces)
     }
 
-    pub fn face_centers(&self) -> [Vec3; 6] {
+    pub(crate) fn face_centers(&self) -> [Vec3; 6] {
         face_centers(self.faces)
     }
 
-    pub fn handle_ball(&self) -> Ball {
-        Ball::new(self.visuals.handle_scale * self.median_extent())
+    pub(crate) fn handle_ball(&self) -> Ball {
+        let radius = (self.visuals.handle_scale)(self.extents());
+        Ball::new(radius)
     }
 
-    pub fn handle_entities(&self) -> [Entity; 6] {
+    pub(crate) fn handle_entities(&self) -> [Entity; 6] {
         self.handle_entities
     }
 
@@ -184,24 +222,20 @@ impl BoxFrame {
         self.reset_lines(line_handles, polylines)
     }
 
-    pub(crate) fn median_extent(&self) -> f32 {
-        median_extent(box_extents(self.faces))
-    }
-
     pub(crate) fn transform_handles(
         &mut self,
         handles: &mut Query<(&mut BoxFrameHandle, &mut Transform)>,
     ) {
-        let base_radius = self.median_extent();
+        let handle_scale = (self.visuals.handle_scale)(self.extents());
         for (face_center, handle_entity) in
             self.face_centers().into_iter().zip(self.handle_entities)
         {
             let Ok((mut handle, mut handle_tfm)) = handles.get_mut(handle_entity) else {
                 return;
             };
-            handle.base_radius = base_radius;
+            handle.base_scale = handle_scale;
             handle_tfm.translation = face_center;
-            handle_tfm.scale = Vec3::splat(handle.scale * handle.base_radius);
+            handle_tfm.scale = Vec3::splat(handle_scale);
         }
     }
 
@@ -252,12 +286,12 @@ impl BoxFrame {
 /// ```
 pub type FaceIndex = usize;
 
-pub const NEG_X: FaceIndex = 0;
-pub const NEG_Y: FaceIndex = 1;
-pub const NEG_Z: FaceIndex = 2;
-pub const POS_X: FaceIndex = 3;
-pub const POS_Y: FaceIndex = 4;
-pub const POS_Z: FaceIndex = 5;
+const NEG_X: FaceIndex = 0;
+const NEG_Y: FaceIndex = 1;
+const NEG_Z: FaceIndex = 2;
+const POS_X: FaceIndex = 3;
+const POS_Y: FaceIndex = 4;
+const POS_Z: FaceIndex = 5;
 
 const FACE_NORMALS: [Vec3; 6] = [
     Vec3::NEG_X,
@@ -336,7 +370,8 @@ fn box_extents(faces: [f32; 6]) -> [f32; 3] {
     [(x2 - x1).abs(), (y2 - y1).abs(), (z2 - z1).abs()]
 }
 
-fn median_extent(mut extents: [f32; 3]) -> f32 {
+/// The median of three values.
+pub fn median3(mut extents: [f32; 3]) -> f32 {
     extents.sort_unstable_by_key(|&x| FloatOrd(x));
     extents[1]
 }

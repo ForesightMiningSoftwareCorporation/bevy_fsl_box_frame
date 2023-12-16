@@ -67,12 +67,12 @@ pub(crate) fn highlight_handles(
         let Ok((handle, mut tfm)) = handles.get_mut(over.target) else {
             continue;
         };
-        tfm.scale = Vec3::splat(handle.base_radius * handle.hover_scale);
+        tfm.scale = Vec3::splat(handle.base_scale * handle.hover_scale);
     }
     for out in out_events.iter() {
         let Ok((handle, mut tfm)) = handles.get_mut(out.target) else {
             continue;
         };
-        tfm.scale = Vec3::splat(handle.base_radius * handle.scale);
+        tfm.scale = Vec3::splat(handle.base_scale);
     }
 }
