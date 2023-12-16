@@ -7,16 +7,14 @@ use approx::relative_eq;
 use bevy::prelude::*;
 use bevy_mod_picking::{
     events::Pointer,
-    prelude::{DragEnd, DragStart, PointerId},
+    prelude::{DragEnd, DragStart},
 };
 use bevy_polyline::prelude::Polyline;
 
 // This data is constant while dragging is occurring.
 pub(crate) struct Dragging {
-    // The pointer doing the drag.
-    pointer_id: PointerId,
-    // The camera used to create the ray that started dragging.
-    camera_id: Entity,
+    // The ray that started dragging.
+    ray_id: RayId,
     // The face being dragged.
     face: FaceIndex,
     // The face's coordinate at time of DragStart.
@@ -54,8 +52,7 @@ pub(crate) fn drag_face(
         };
         let face = face_index_from_world_normal(world_normal, transform);
         frame.dragging_face = Some(Dragging {
-            pointer_id: drag_start.pointer_id,
-            camera_id: hit_data.camera,
+            ray_id: RayId::new(hit_data.camera, drag_start.pointer_id),
             face,
             initial_coord: frame.faces()[face],
             drag_ray: Ray {
@@ -76,8 +73,7 @@ pub(crate) fn drag_face(
     // frame to reflect that.
     for (mut frame, _) in box_frames.iter_mut() {
         let Some(Dragging {
-            pointer_id,
-            camera_id,
+            ray_id,
             face,
             initial_coord,
             drag_ray,
@@ -86,7 +82,7 @@ pub(crate) fn drag_face(
             continue;
         };
 
-        let Some(pointer_ray) = ray_map.map().get(&RayId::new(camera_id, pointer_id)) else {
+        let Some(pointer_ray) = ray_map.map().get(&ray_id) else {
             continue;
         };
 
