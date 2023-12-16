@@ -140,6 +140,10 @@ impl BoxFrame {
         self.faces
     }
 
+    pub fn sorted_faces(&self) -> [f32; 6] {
+        sorted_faces(self.faces)
+    }
+
     pub fn center(&self) -> Vec3 {
         self.aabb().center().into()
     }
@@ -173,7 +177,7 @@ impl BoxFrame {
     ) {
         self.dragging_face = None;
         // Sort faces so we can pick the correct face on the next picking event.
-        self.faces = sorted_faces(self.faces);
+        self.faces = self.sorted_faces();
         self.reset_lines(line_handles, polylines)
     }
 
