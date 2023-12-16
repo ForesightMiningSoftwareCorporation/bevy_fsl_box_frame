@@ -23,7 +23,7 @@ mod ray_map;
 pub use box_frame::*;
 pub use solid_color_material::*;
 
-use bevy::prelude::{IntoSystemConfigs, MaterialPlugin, Plugin, PreUpdate, Update};
+use bevy::prelude::{Assets, IntoSystemConfigs, MaterialPlugin, Plugin, PreUpdate, Shader, Update};
 use bevy_mod_picking::picking_core::PickSet;
 use drag_face::*;
 use handle_visibility::*;
@@ -36,6 +36,12 @@ pub struct BoxFramePlugin;
 
 impl Plugin for BoxFramePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
+        shaders.set_untracked(
+            SHADER_HANDLE,
+            Shader::from_wgsl(include_str!("shaders/solid_color.wgsl"), file!()),
+        );
+
         app.add_plugins(MaterialPlugin::<SolidColorMaterial>::default())
             .init_resource::<RayMap>()
             .add_systems(PreUpdate, RayMap::repopulate.in_set(PickSet::ProcessInput))
