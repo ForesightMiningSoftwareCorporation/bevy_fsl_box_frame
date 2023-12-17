@@ -47,10 +47,11 @@ pub struct BoxFrameVisuals {
 /// Given the box frame's current extents, returns the desired scaling factor of
 /// the handle's [`Transform`].
 ///
-/// The scaling factor should be considered equivalent to the radius of the
-/// default handle mesh (a sphere). Note that the picking intersection test uses
-/// a unit-radius ball scaled by this function, so if you are using a custom
-/// mesh, you must account for its perceived radius.
+/// The scaling factor should be considered equivalent to the perceived radius
+/// of the default handle mesh (a sphere). Note that the picking intersection
+/// test uses a unit-radius ball scaled by this function, so if you are using
+/// a custom mesh, you must account for its perceived radius, and picking might
+/// not work as well for non-spherical meshes.
 pub type ScalingFn = fn([f32; 3]) -> f32;
 
 #[derive(Component)]
