@@ -41,7 +41,7 @@ pub(crate) fn drag_face(
     mut handles: Query<(&mut BoxFrameHandle, &mut Transform)>,
 ) {
     // Start or stop the dragging state machine based on events.
-    for drag_start in drag_start_events.iter() {
+    for drag_start in drag_start_events.read() {
         let Ok((mut frame, transform)) = box_frames.get_mut(drag_start.target) else {
             continue;
         };
@@ -64,7 +64,7 @@ pub(crate) fn drag_face(
             },
         });
     }
-    for drag_end in drag_end_events.iter() {
+    for drag_end in drag_end_events.read() {
         let Ok(mut frame) = box_frames.get_component_mut::<BoxFrame>(drag_end.target) else {
             continue;
         };
