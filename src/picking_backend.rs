@@ -2,6 +2,7 @@ use crate::{ray_map::RayMap, BoxFrame};
 use bevy::{
     ecs::prelude::*,
     prelude::{Camera, GlobalTransform},
+    render::view::RenderLayers,
 };
 use bevy_mod_picking::backend::{HitData, PointerHits};
 use parry3d::{na::Isometry3, query::RayCast};
@@ -9,20 +10,27 @@ use parry3d::{na::Isometry3, query::RayCast};
 /// Generates pointer hits for the box frame's AABB and handles.
 pub(crate) fn box_frame_backend(
     ray_map: Res<RayMap>,
-    cameras: Query<&Camera>,
-    box_frames: Query<(Entity, &BoxFrame, &GlobalTransform)>,
+    cameras: Query<(&Camera, Option<&RenderLayers>)>,
+    box_frames: Query<(Entity, &BoxFrame, &GlobalTransform, Option<&RenderLayers>)>,
     transforms: Query<&GlobalTransform>,
     mut picking_out: EventWriter<PointerHits>,
 ) {
     for (&ray_id, &ray) in ray_map.map().iter() {
-        let Ok(camera) = cameras.get(ray_id.camera) else {
+        let Ok((camera, view_mask)) = cameras.get(ray_id.camera) else {
             continue;
         };
+
+        let cam_view_mask = view_mask.copied().unwrap_or_default();
 
         let ray = parry3d::query::Ray::new(ray.origin.into(), ray.direction.into());
 
         let mut picks = Vec::new();
-        for (frame_entity, frame, frame_transform) in &box_frames {
+        for (frame_entity, frame, frame_transform, frame_view_mask) in &box_frames {
+            let frame_view_mask = frame_view_mask.copied().unwrap_or_default();
+            if !frame_view_mask.intersects(&cam_view_mask) {
+                continue;
+            }
+
             let world_frame_center = frame_transform.transform_point(frame.center());
             // Check handle intersections first, they always take priority.
             let ball = frame.handle_ball();
