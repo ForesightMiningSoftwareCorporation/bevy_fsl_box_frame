@@ -9,9 +9,9 @@ pub fn handle_visibility(
     box_frames: Query<&BoxFrame>,
     mut visibility: Query<&mut Visibility>,
 ) {
-    let normalized_over = over_events.iter().map(|e| (e.target, Visibility::Visible));
-    let normalized_move = move_events.iter().map(|e| (e.target, Visibility::Visible));
-    let normalized_out = out_events.iter().map(|e| (e.target, Visibility::Hidden));
+    let normalized_over = over_events.read().map(|e| (e.target, Visibility::Visible));
+    let normalized_move = move_events.read().map(|e| (e.target, Visibility::Visible));
+    let normalized_out = out_events.read().map(|e| (e.target, Visibility::Hidden));
 
     for (target, set_visibility) in normalized_over.chain(normalized_move).chain(normalized_out) {
         let Ok(frame) = box_frames.get(target) else {

@@ -23,13 +23,13 @@ pub(crate) fn highlight_face(
     }
 
     let normalized_over = over_events
-        .iter()
+        .read()
         .map(|e| (e.target, Some(e.event.hit.clone())));
     let normalized_move = move_events
-        .iter()
+        .read()
         .map(|e| (e.target, Some(e.event.hit.clone())));
-    let normalized_out = out_events.iter().map(|e| (e.target, None));
-    let normalized_drag_end = drag_end_events.iter().map(|e| (e.target, None));
+    let normalized_out = out_events.read().map(|e| (e.target, None));
+    let normalized_drag_end = drag_end_events.read().map(|e| (e.target, None));
 
     // Highlight faces intersecting a pointer ray. "Out" events will clear all
     // highlights.
@@ -63,13 +63,13 @@ pub(crate) fn highlight_handles(
     mut out_events: EventReader<Pointer<Out>>,
     mut handles: Query<(&BoxFrameHandle, &mut Transform)>,
 ) {
-    for over in over_events.iter() {
+    for over in over_events.read() {
         let Ok((handle, mut tfm)) = handles.get_mut(over.target) else {
             continue;
         };
         tfm.scale = Vec3::splat(handle.base_scale * handle.hover_scale);
     }
-    for out in out_events.iter() {
+    for out in out_events.read() {
         let Ok((handle, mut tfm)) = handles.get_mut(out.target) else {
             continue;
         };
