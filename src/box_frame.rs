@@ -1,5 +1,5 @@
 use crate::{drag_face::Dragging, solid_color_material::SolidColorMaterial};
-use bevy::{ecs::system::EntityCommands, prelude::*, utils::FloatOrd};
+use bevy::{color::palettes::css::RED, ecs::system::EntityCommands, math::FloatOrd, prelude::*};
 use bevy_mod_picking::prelude::{Pickable, PointerButton};
 use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
 use parry3d::{bounding_volume::Aabb, shape::Ball};
@@ -80,7 +80,7 @@ impl BoxFrameVisuals {
             }),
 
             handle_mesh: meshes.add(Sphere::new(1.0).mesh()),
-            handle_material: materials.add(Color::RED),
+            handle_material: materials.add(RED),
             handle_scale: |e| 0.05 * median3(e),
             handle_hover_scale: 1.2,
         }
