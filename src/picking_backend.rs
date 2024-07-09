@@ -1,11 +1,11 @@
-use crate::{ray_map::RayMap, BoxFrame};
+use crate::BoxFrame;
 use bevy::{
     ecs::prelude::*,
     math::Vec3Swizzles,
     prelude::{Camera, GlobalTransform},
     render::view::RenderLayers,
 };
-use bevy_mod_picking::backend::{HitData, PointerHits};
+use bevy_mod_picking::backend::{ray::RayMap, HitData, PointerHits};
 use parry3d::{na::Isometry3, query::RayCast};
 
 /// Generates pointer hits for the box frame's AABB and handles.

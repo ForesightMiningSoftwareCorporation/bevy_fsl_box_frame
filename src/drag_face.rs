@@ -1,11 +1,8 @@
-use crate::{
-    face_index_from_world_normal, face_sign,
-    ray_map::{RayId, RayMap},
-    BoxFrame, BoxFrameHandle, FaceIndex,
-};
+use crate::{face_index_from_world_normal, face_sign, BoxFrame, BoxFrameHandle, FaceIndex};
 use approx::relative_eq;
 use bevy::prelude::*;
 use bevy_mod_picking::{
+    backend::ray::{RayId, RayMap},
     events::Pointer,
     prelude::{DragEnd, DragStart},
 };
