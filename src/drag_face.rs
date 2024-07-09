@@ -1,11 +1,8 @@
-use crate::{
-    face_index_from_world_normal, face_sign,
-    ray_map::{RayId, RayMap},
-    BoxFrame, BoxFrameHandle, FaceIndex,
-};
+use crate::{face_index_from_world_normal, face_sign, BoxFrame, BoxFrameHandle, FaceIndex};
 use approx::relative_eq;
 use bevy::prelude::*;
 use bevy_mod_picking::{
+    backend::ray::{RayId, RayMap},
     events::Pointer,
     prelude::{DragEnd, DragStart},
 };
@@ -21,7 +18,7 @@ pub(crate) struct Dragging {
     initial_coord: f32,
     // The ray along which the face is translated during dragging. In world
     // coordinates.
-    drag_ray: Ray,
+    drag_ray: Ray3d,
 }
 
 impl Dragging {
@@ -58,14 +55,14 @@ pub(crate) fn drag_face(
             ray_id: RayId::new(hit_data.camera, drag_start.pointer_id),
             face,
             initial_coord: frame.faces()[face],
-            drag_ray: Ray {
+            drag_ray: Ray3d {
                 origin: world_position,
-                direction: world_normal,
+                direction: Direction3d::new(world_normal).unwrap(),
             },
         });
     }
     for drag_end in drag_end_events.read() {
-        let Ok(mut frame) = box_frames.get_component_mut::<BoxFrame>(drag_end.target) else {
+        let Ok((mut frame, _)) = box_frames.get_mut(drag_end.target) else {
             continue;
         };
         frame.on_drag_end(&mut line_handles, &mut polylines);
@@ -105,9 +102,9 @@ pub(crate) fn drag_face(
 /// Find the closest pair of points `(p1, p2)` where `p1` is on ray `r1` and
 /// `p2` is on ray `r2`. Returns `(t1, t2)` such that `p_n =
 /// r_n.get_point(t_n)`.
-fn closest_points_on_two_rays(r1: &Ray, r2: &Ray) -> Option<(f32, f32)> {
+fn closest_points_on_two_rays(r1: &Ray3d, r2: &Ray3d) -> Option<(f32, f32)> {
     // If the rays are parallel, then there are infinitely many solutions.
-    if vectors_are_parallel(r1.direction, r2.direction) {
+    if vectors_are_parallel(*r1.direction, *r2.direction) {
         return None;
     }
 
@@ -117,9 +114,9 @@ fn closest_points_on_two_rays(r1: &Ray, r2: &Ray) -> Option<(f32, f32)> {
     // t1 * V1 - t2 * V2 + t3 * (V1 x V2) = P2 - P1
     let col1 = r1.direction;
     let col2 = -r2.direction;
-    let col3 = r1.direction.cross(r2.direction);
+    let col3 = r1.direction.cross(*r2.direction);
     let rhs = r2.origin - r1.origin;
-    let mat = Mat3::from_cols(col1, col2, col3);
+    let mat = Mat3::from_cols(*col1, *col2, col3);
     let t = mat.inverse() * rhs;
 
     Some((t.x, t.y))

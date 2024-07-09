@@ -1,10 +1,11 @@
-use crate::{ray_map::RayMap, BoxFrame};
+use crate::BoxFrame;
 use bevy::{
     ecs::prelude::*,
+    math::Vec3Swizzles,
     prelude::{Camera, GlobalTransform},
     render::view::RenderLayers,
 };
-use bevy_mod_picking::backend::{HitData, PointerHits};
+use bevy_mod_picking::backend::{ray::RayMap, HitData, PointerHits};
 use parry3d::{na::Isometry3, query::RayCast};
 
 /// Generates pointer hits for the box frame's AABB and handles.
@@ -22,7 +23,7 @@ pub(crate) fn box_frame_backend(
 
         let cam_view_mask = view_mask.copied().unwrap_or_default();
 
-        let ray = parry3d::query::Ray::new(ray.origin.into(), ray.direction.into());
+        let ray = parry3d::query::Ray::new(ray.origin.into(), ray.direction.xyz().into());
 
         let mut picks = Vec::new();
         for (frame_entity, frame, frame_transform, frame_view_mask) in &box_frames {
