@@ -107,7 +107,7 @@ pub(crate) fn drag_face(
 /// r_n.get_point(t_n)`.
 fn closest_points_on_two_rays(r1: &Ray3d, r2: &Ray3d) -> Option<(f32, f32)> {
     // If the rays are parallel, then there are infinitely many solutions.
-    if vectors_are_parallel(r1.direction.xyz(), r2.direction.xyz()) {
+    if vectors_are_parallel(*r1.direction, *r2.direction) {
         return None;
     }
 
@@ -117,9 +117,9 @@ fn closest_points_on_two_rays(r1: &Ray3d, r2: &Ray3d) -> Option<(f32, f32)> {
     // t1 * V1 - t2 * V2 + t3 * (V1 x V2) = P2 - P1
     let col1 = r1.direction;
     let col2 = -r2.direction;
-    let col3 = r1.direction.cross(r2.direction.xyz());
+    let col3 = r1.direction.cross(*r2.direction);
     let rhs = r2.origin - r1.origin;
-    let mat = Mat3::from_cols(col1.xyz(), col2.xyz(), col3.xyz());
+    let mat = Mat3::from_cols(*col1, *col2, col3);
     let t = mat.inverse() * rhs;
 
     Some((t.x, t.y))
