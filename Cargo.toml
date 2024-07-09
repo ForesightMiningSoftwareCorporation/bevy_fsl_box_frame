@@ -10,7 +10,7 @@ homepage = "https://github.com/ForesightMiningSoftwareCorporation/bevy_fsl_box_f
 documentation = "https://docs.rs/bevy_fsl_box_frame"
 readme = "README.md"
 keywords = ["bevy", "gizmo"]
-categories = ["3D", "game-development"]
+categories = ["game-development"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
