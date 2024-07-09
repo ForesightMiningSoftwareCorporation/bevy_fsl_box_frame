@@ -60,7 +60,7 @@ pub(crate) fn drag_face(
             initial_coord: frame.faces()[face],
             drag_ray: Ray3d {
                 origin: world_position,
-                direction: Direction3d::new(world_normal).unwrap(),
+                direction: Dir3::new(world_normal).unwrap(),
             },
         });
     }
