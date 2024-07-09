@@ -1,7 +1,7 @@
 use bevy::{
     asset::Asset,
     prelude::{AlphaMode, Color, Handle, Material, Shader},
-    reflect::{TypePath, TypeUuid},
+    reflect::TypePath,
     render::render_resource::{AsBindGroup, ShaderRef},
 };
 
@@ -9,8 +9,7 @@ pub(crate) const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(78254136
 
 /// A mesh material that only outputs a single color.
 #[allow(missing_docs)]
-#[derive(Asset, AsBindGroup, Clone, Debug, TypePath, TypeUuid)]
-#[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
+#[derive(Asset, AsBindGroup, Clone, Debug, TypePath)]
 pub struct SolidColorMaterial {
     #[uniform(0)]
     pub color: Color,

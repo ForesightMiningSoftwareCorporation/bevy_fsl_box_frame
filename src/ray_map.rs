@@ -1,7 +1,7 @@
 // This is a copy of the ray module from an upcoming release of bevy_mod_picking.
 
 use bevy::ecs::prelude::*;
-use bevy::math::Ray;
+use bevy::math::Ray3d;
 use bevy::render::camera::Camera;
 use bevy::transform::prelude::GlobalTransform;
 use bevy::utils::HashMap;
@@ -30,12 +30,12 @@ impl RayId {
 /// Ray-based picking backends should use this when possible.
 #[derive(Clone, Debug, Default, Resource)]
 pub struct RayMap {
-    map: HashMap<RayId, Ray>,
+    map: HashMap<RayId, Ray3d>,
 }
 
 impl RayMap {
     /// The hash map of all rays cast in the current frame.
-    pub fn map(&self) -> &HashMap<RayId, Ray> {
+    pub fn map(&self) -> &HashMap<RayId, Ray3d> {
         &self.map
     }
 
@@ -72,7 +72,7 @@ fn make_ray(
     camera: &Camera,
     camera_tfm: &GlobalTransform,
     pointer_loc: &PointerLocation,
-) -> Option<Ray> {
+) -> Option<Ray3d> {
     let pointer_loc = pointer_loc.location()?;
     if !pointer_loc.is_in_viewport(camera, primary_window_entity) {
         return None;

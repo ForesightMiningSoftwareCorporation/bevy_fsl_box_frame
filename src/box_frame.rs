@@ -79,8 +79,8 @@ impl BoxFrameVisuals {
                 ..default()
             }),
 
-            handle_mesh: meshes.add(shape::Icosphere::default().try_into().unwrap()),
-            handle_material: materials.add(Color::RED.into()),
+            handle_mesh: meshes.add(Sphere::new(1.0).mesh()),
+            handle_material: materials.add(Color::RED),
             handle_scale: |e| 0.05 * median3(e),
             handle_hover_scale: 1.2,
         }
@@ -136,7 +136,7 @@ impl BoxFrame {
                             },
                             Pickable {
                                 should_block_lower: false,
-                                should_emit_events: true,
+                                is_hoverable: true,
                             },
                         ))
                         .id();
@@ -157,7 +157,7 @@ impl BoxFrame {
                 },
                 Pickable {
                     should_block_lower: false,
-                    should_emit_events: true,
+                    is_hoverable: true,
                 },
             ));
     }
