@@ -21,14 +21,14 @@ pub(crate) fn box_frame_backend(
             continue;
         };
 
-        let cam_view_mask = view_mask.copied().unwrap_or_default();
+        let cam_view_mask = view_mask.unwrap_or_default();
 
         let ray = parry3d::query::Ray::new(ray.origin.into(), ray.direction.xyz().into());
 
         let mut picks = Vec::new();
         for (frame_entity, frame, frame_transform, frame_view_mask) in &box_frames {
-            let frame_view_mask = frame_view_mask.copied().unwrap_or_default();
-            if !frame_view_mask.intersects(&cam_view_mask) {
+            let frame_view_mask = frame_view_mask.unwrap_or_default();
+            if !frame_view_mask.intersects(cam_view_mask) {
                 continue;
             }
 
