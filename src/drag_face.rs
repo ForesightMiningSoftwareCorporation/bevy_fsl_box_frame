@@ -51,13 +51,17 @@ pub(crate) fn drag_face(
             continue;
         };
         let face = face_index_from_world_normal(world_normal, transform);
-        frame.dragging_face = Some(Dragging {
+        let maybe_direction = Dir3::new(world_normal).ok();
+
+        // The world normal Vec3 could be zero, making it impossible to determine the direction.
+        // Only update the dragging face if the direction is valid.
+        frame.dragging_face = maybe_direction.map(|direction| Dragging {
             ray_id: RayId::new(hit_data.camera, drag_start.pointer_id),
             face,
             initial_coord: frame.faces()[face],
             drag_ray: Ray3d {
                 origin: world_position,
-                direction: Dir3::new(world_normal).unwrap(),
+                direction,
             },
         });
     }
