@@ -2,5 +2,5 @@ filters:
   ".*":
     approvers:
     - IceSentry
-    - aevyrie
     - bonsairobo
+    - loispostula
