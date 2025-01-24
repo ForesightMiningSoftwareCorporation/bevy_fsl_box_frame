@@ -1,0 +1,6 @@
+filters:
+  ".*":
+    approvers:
+    - IceSentry
+    - bonsairobo
+    - loispostula
