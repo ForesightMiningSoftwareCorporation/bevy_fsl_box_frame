@@ -1,4 +1,6 @@
 filters:
   ".*":
     approvers:
-    - fslabs-all
+    - IceSentry
+    - aevyrie
+    - bonsairobo
