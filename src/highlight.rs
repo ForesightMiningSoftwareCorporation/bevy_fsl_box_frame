@@ -1,10 +1,6 @@
 use crate::{face_index_from_world_normal, BoxFrame, BoxFrameHandle};
 use bevy::prelude::*;
-use bevy_mod_picking::{
-    events::Pointer,
-    prelude::{DragEnd, Move, Out, Over},
-};
-use bevy_polyline::prelude::PolylineMaterial;
+use bevy_polyline::prelude::PolylineMaterialHandle;
 
 pub(crate) fn highlight_face(
     mut over_events: EventReader<Pointer<Over>>,
@@ -12,7 +8,7 @@ pub(crate) fn highlight_face(
     mut out_events: EventReader<Pointer<Out>>,
     mut drag_end_events: EventReader<Pointer<DragEnd>>,
     box_frames: Query<(&BoxFrame, &GlobalTransform)>,
-    mut line_handles: Query<&mut Handle<PolylineMaterial>>,
+    mut line_handles: Query<&mut PolylineMaterialHandle>,
 ) {
     // Prioritize highlighting based on faces being dragged.
     for (frame, _) in &box_frames {

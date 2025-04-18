@@ -1,6 +1,9 @@
 use crate::BoxFrame;
-use bevy::{ecs::prelude::*, prelude::Visibility};
-use bevy_mod_picking::prelude::{Move, Out, Over, Pointer};
+use bevy::{
+    ecs::prelude::*,
+    picking::events::{Move, Out, Over, Pointer},
+    prelude::Visibility,
+};
 
 pub fn handle_visibility(
     mut over_events: EventReader<Pointer<Over>>,

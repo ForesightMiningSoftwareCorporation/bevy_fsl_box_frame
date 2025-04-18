@@ -1,7 +1,8 @@
 use crate::{drag_face::Dragging, solid_color_material::SolidColorMaterial};
 use bevy::{color::palettes::css::RED, ecs::system::EntityCommands, math::FloatOrd, prelude::*};
-use bevy_mod_picking::prelude::{Pickable, PointerButton};
-use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
+use bevy_polyline::prelude::{
+    Polyline, PolylineBundle, PolylineHandle, PolylineMaterial, PolylineMaterialHandle,
+};
 use parry3d::{bounding_volume::Aabb, shape::Ball};
 
 /// The behavioral component of a box frame entity.
@@ -26,9 +27,9 @@ pub struct BoxFrame {
 #[derive(Clone)]
 pub struct BoxFrameVisuals {
     /// Material used for frame edges.
-    pub edge_material: Handle<PolylineMaterial>,
+    pub edge_material: PolylineMaterialHandle,
     /// Material used for highlighting frame handles.
-    pub edge_highlight_material: Handle<PolylineMaterial>,
+    pub edge_highlight_material: PolylineMaterialHandle,
     /// Mesh used to render a face handle.
     pub handle_mesh: Handle<Mesh>,
     /// Material used to render a face handle.
@@ -70,14 +71,14 @@ impl BoxFrameVisuals {
         materials: &mut Assets<SolidColorMaterial>,
     ) -> Self {
         Self {
-            edge_material: line_materials.add(PolylineMaterial {
+            edge_material: PolylineMaterialHandle(line_materials.add(PolylineMaterial {
                 width: 1.0,
                 ..default()
-            }),
-            edge_highlight_material: line_materials.add(PolylineMaterial {
+            })),
+            edge_highlight_material: PolylineMaterialHandle(line_materials.add(PolylineMaterial {
                 width: 3.0,
                 ..default()
-            }),
+            })),
 
             handle_mesh: meshes.add(Sphere::new(1.0).mesh()),
             handle_material: materials.add(RED),
@@ -110,7 +111,7 @@ impl BoxFrame {
                 for (face, entity) in face_polylines(faces).into_iter().zip(&mut face_entities) {
                     *entity = builder
                         .spawn(PolylineBundle {
-                            polyline: polylines.add(face),
+                            polyline: PolylineHandle(polylines.add(face)),
                             material: visuals.edge_material.clone(),
                             ..default()
                         })
@@ -120,21 +121,18 @@ impl BoxFrame {
                     face_centers(faces).into_iter().zip(&mut handle_entities)
                 {
                     *entity = builder
-                        .spawn(MaterialMeshBundle {
-                            mesh: visuals.handle_mesh.clone(),
-                            material: visuals.handle_material.clone(),
-                            transform: Transform::default()
+                        .spawn((
+                            Mesh3d(visuals.handle_mesh.clone()),
+                            MeshMaterial3d(visuals.handle_material.clone()),
+                            Transform::default()
                                 .with_translation(handle_center)
                                 .with_scale(Vec3::splat((visuals.handle_scale)(extents))),
-                            visibility: Visibility::Hidden,
-                            ..default()
-                        })
-                        .insert((
+                            Visibility::Hidden,
                             BoxFrameHandle {
                                 base_scale,
                                 hover_scale: visuals.handle_hover_scale,
                             },
-                            Pickable {
+                            PickingBehavior {
                                 should_block_lower: false,
                                 is_hoverable: true,
                             },
@@ -151,11 +149,9 @@ impl BoxFrame {
                     visuals,
                     dragging_face: None,
                 },
-                SpatialBundle {
-                    transform,
-                    ..default()
-                },
-                Pickable {
+                transform,
+                Visibility::default(),
+                PickingBehavior {
                     should_block_lower: false,
                     is_hoverable: true,
                 },
@@ -214,7 +210,7 @@ impl BoxFrame {
 
     pub(crate) fn on_drag_end(
         &mut self,
-        line_handles: &mut Query<&mut Handle<Polyline>>,
+        line_handles: &mut Query<&mut PolylineHandle>,
         polylines: &mut Assets<Polyline>,
     ) {
         self.dragging_face = None;
@@ -242,7 +238,7 @@ impl BoxFrame {
 
     pub(crate) fn reset_lines(
         &self,
-        line_handles: &mut Query<&mut Handle<Polyline>>,
+        line_handles: &mut Query<&mut PolylineHandle>,
         polylines: &mut Assets<Polyline>,
     ) {
         let new_lines = face_polylines(self.faces);
@@ -250,13 +246,13 @@ impl BoxFrame {
             let Ok(mut line_handle) = line_handles.get_mut(face_entity) else {
                 continue;
             };
-            *line_handle = polylines.add(new_line);
+            *line_handle = PolylineHandle(polylines.add(new_line));
         }
     }
 
     pub(crate) fn clear_highlights(
         &self,
-        material_handles: &mut Query<&mut Handle<PolylineMaterial>>,
+        material_handles: &mut Query<&mut PolylineMaterialHandle>,
     ) {
         for face_entity in self.face_entities {
             if let Ok(mut line_handle) = material_handles.get_mut(face_entity) {
@@ -268,7 +264,7 @@ impl BoxFrame {
     pub(crate) fn highlight_face(
         &self,
         face: FaceIndex,
-        line_handles: &mut Query<&mut Handle<PolylineMaterial>>,
+        line_handles: &mut Query<&mut PolylineMaterialHandle>,
     ) {
         // Highlight the picked face.
         if let Ok(mut line_handle) = line_handles.get_mut(self.face_entities[face]) {

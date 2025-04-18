@@ -1,12 +1,10 @@
 use crate::{face_index_from_world_normal, face_sign, BoxFrame, BoxFrameHandle, FaceIndex};
 use approx::relative_eq;
-use bevy::prelude::*;
-use bevy_mod_picking::{
-    backend::ray::{RayId, RayMap},
-    events::Pointer,
-    prelude::{DragEnd, DragStart},
+use bevy::{
+    picking::backend::ray::{RayId, RayMap},
+    prelude::*,
 };
-use bevy_polyline::prelude::Polyline;
+use bevy_polyline::prelude::{Polyline, PolylineHandle};
 
 // This data is constant while dragging is occurring.
 pub(crate) struct Dragging {
@@ -34,7 +32,7 @@ pub(crate) fn drag_face(
     ray_map: Res<RayMap>,
     mut polylines: ResMut<Assets<Polyline>>,
     mut box_frames: Query<(&mut BoxFrame, &GlobalTransform)>,
-    mut line_handles: Query<&mut Handle<Polyline>>,
+    mut line_handles: Query<&mut PolylineHandle>,
     mut handles: Query<(&mut BoxFrameHandle, &mut Transform)>,
 ) {
     // Start or stop the dragging state machine based on events.

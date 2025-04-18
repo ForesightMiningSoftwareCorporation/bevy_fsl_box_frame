@@ -16,20 +16,20 @@ categories = ["game-development"]
 
 [dependencies]
 approx = "0.5"
-bevy_polyline = "0.10"
-parry3d = "0.13"
-bevy = { version = "0.14", default-features = false, features = [
-    "bevy_asset",
-    "bevy_pbr",
+bevy_polyline = "0.11"
+parry3d = "0.19"
+bevy = { version = "0.15.3", default-features = false, features = [
+  "bevy_asset",
+  "bevy_pbr",
 ] }
-bevy_mod_picking = { version = "0.20", default-features = false }
-nalgebra = { version = "0.32", features = ["glam027"] }
+nalgebra = { version = "0.33", features = ["convert-glam029"] }
 
 [dev-dependencies]
-bevy = { version = "0.14", default-features = false, features = [
-    "bevy_asset",
-    "bevy_pbr",
-    "bevy_winit",
-    "x11",
-    "tonemapping_luts",
+bevy = { version = "0.15.3", default-features = false, features = [
+  "bevy_asset",
+  "bevy_pbr",
+  "bevy_winit",
+  "x11",
+  "tonemapping_luts",
+  "bevy_picking",
 ] }
