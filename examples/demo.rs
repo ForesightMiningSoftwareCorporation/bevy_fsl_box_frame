@@ -1,13 +1,11 @@
 use bevy::prelude::*;
 use bevy_fsl_box_frame::{BoxFrame, BoxFramePlugin, BoxFrameVisuals, SolidColorMaterial};
-use bevy_mod_picking::prelude::*;
 use bevy_polyline::prelude::{Polyline, PolylineMaterial};
 
 fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
-            DefaultPickingPlugins,
             bevy_polyline::PolylinePlugin,
             BoxFramePlugin,
         ))
@@ -37,8 +35,8 @@ fn setup(
         &mut commands.spawn(()),
     );
 
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
 }

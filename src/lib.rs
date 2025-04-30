@@ -13,9 +13,9 @@ pub use solid_color_material::*;
 
 use bevy::{
     asset::load_internal_asset,
+    picking::PickSet,
     prelude::{IntoSystemConfigs, MaterialPlugin, Plugin, PreUpdate, Shader, Update},
 };
-use bevy_mod_picking::picking_core::PickSet;
 use drag_face::*;
 use handle_visibility::*;
 use highlight::*;
