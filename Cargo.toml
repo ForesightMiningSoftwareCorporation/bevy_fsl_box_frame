@@ -1,6 +1,6 @@
 [package]
 name = "bevy_fsl_box_frame"
-version = "0.4.1"
+version = "0.5.0"
 description = "A gizmo for manipulating an OBB via 3D picking"
 edition = "2021"
 authors = ["Duncan Fairbanks <duncan.fairbanks@fslabs.ca>"]
