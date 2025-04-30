@@ -21,6 +21,7 @@ parry3d = "0.19"
 bevy = { version = "0.15.3", default-features = false, features = [
   "bevy_asset",
   "bevy_pbr",
+  "bevy_picking",
 ] }
 nalgebra = { version = "0.33", features = ["convert-glam029"] }
 
