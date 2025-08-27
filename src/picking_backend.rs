@@ -16,7 +16,7 @@ pub(crate) fn box_frame_backend(
     transforms: Query<&GlobalTransform>,
     mut picking_out: EventWriter<PointerHits>,
 ) {
-    for (&ray_id, &ray) in ray_map.map().iter() {
+    for (&ray_id, &ray) in ray_map.map.iter() {
         let Ok((camera, view_mask)) = cameras.get(ray_id.camera) else {
             continue;
         };
@@ -90,7 +90,7 @@ pub(crate) fn box_frame_backend(
         }
 
         if !picks.is_empty() {
-            picking_out.send(PointerHits {
+            picking_out.write(PointerHits {
                 pointer: ray_id.pointer,
                 picks,
                 order: camera.order as f32,

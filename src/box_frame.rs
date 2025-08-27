@@ -132,7 +132,7 @@ impl BoxFrame {
                                 base_scale,
                                 hover_scale: visuals.handle_hover_scale,
                             },
-                            PickingBehavior {
+                            Pickable {
                                 should_block_lower: false,
                                 is_hoverable: true,
                             },
@@ -151,7 +151,7 @@ impl BoxFrame {
                 },
                 transform,
                 Visibility::default(),
-                PickingBehavior {
+                Pickable {
                     should_block_lower: false,
                     is_hoverable: true,
                 },
