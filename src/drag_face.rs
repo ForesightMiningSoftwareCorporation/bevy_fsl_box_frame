@@ -84,7 +84,7 @@ pub(crate) fn drag_face(
             continue;
         };
 
-        let Some(pointer_ray) = ray_map.map().get(&ray_id) else {
+        let Some(pointer_ray) = &ray_map.map.get(&ray_id) else {
             continue;
         };
 
