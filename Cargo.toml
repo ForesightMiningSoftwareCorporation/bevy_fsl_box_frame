@@ -1,6 +1,6 @@
 [package]
 name = "bevy_fsl_box_frame"
-version = "0.8.0"
+version = "0.9.0"
 description = "A gizmo for manipulating an OBB via 3D picking"
 edition = "2021"
 authors = ["Duncan Fairbanks <duncan.fairbanks@fslabs.ca>"]
@@ -16,18 +16,18 @@ categories = ["game-development"]
 
 [dependencies]
 approx = "0.5"
-bevy_polyline = "0.14"
-parry3d-f64 = "0.26"
-bevy = { version = "0.18", default-features = false, features = [
+bevy_polyline = { git = "https://github.com/fslabs/bevy_polyline.git", rev = "b03e887c7593806caac096134d6227964b1f3d7d" }
+parry3d-f64 = "0.27"
+bevy = { version = "0.19", default-features = false, features = [
   "bevy_asset",
   "bevy_pbr",
   "bevy_picking",
   "zstd_rust",
 ] }
-nalgebra = { version = "0.34", features = ["convert-glam030"] }
+nalgebra = { version = "0.34", features = ["convert-glam032"] }
 
 [dev-dependencies]
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.19", default-features = false, features = [
   "bevy_asset",
   "bevy_pbr",
   "bevy_winit",
